@@ -19,6 +19,9 @@ import (
 const (
 	FileName = "project.crud"
 	Version  = 1
+	// CustomArchitecture marca projetos que não seguem uma arquitetura do
+	// crudding (ex.: templates criados com "crudding init").
+	CustomArchitecture = "custom"
 )
 
 type Manifest struct {
@@ -29,9 +32,35 @@ type Manifest struct {
 	Framework    string   `json:"framework"`
 	Architecture string   `json:"architecture"`
 	Endpoints    []string `json:"endpoints"`
-	Database     string   `json:"database,omitempty"`
-	Databases    []string `json:"databases,omitempty"`
-	ORM          string   `json:"orm,omitempty"`
+	// Endpoint, quando preenchido, define como "crudding add/remove endpoint"
+	// cria e remove recursos neste projeto, no lugar do layout da arquitetura.
+	Endpoint  EndpointSpec `json:"endpoint"`
+	Database  string       `json:"database,omitempty"`
+	Databases []string     `json:"databases,omitempty"`
+	ORM       string       `json:"orm,omitempty"`
+	// Template é o name do projeto-template que gerou este projeto.
+	Template string `json:"template,omitempty"`
+	// Ignore, Directories e Files descrevem a estrutura do projeto, usada por
+	// "crudding template": a geração e o "crudding init" listam as pastas e os
+	// arquivos, menos o ignore.
+	Ignore      []string `json:"ignore"`
+	Directories []string `json:"directories"`
+	Files       []string `json:"files"`
+}
+
+// EndpointSpec descreve um endpoint de exemplo que já existe no projeto. O
+// "add endpoint <nome>" copia Files trocando Name pelo nome novo e, em cada
+// arquivo de Register, duplica as linhas que mencionam Name; o "remove
+// endpoint" desfaz as duas coisas.
+type EndpointSpec struct {
+	Name     string   `json:"name"`     // endpoint de exemplo, em snake_case
+	Files    []string `json:"files"`    // arquivos do exemplo, copiados com o nome trocado
+	Register []string `json:"register"` // arquivos compartilhados (rotas, imports)
+}
+
+// Defined diz se o campo endpoint foi preenchido.
+func (e EndpointSpec) Defined() bool {
+	return e.Name != "" || len(e.Files) > 0 || len(e.Register) > 0
 }
 
 func New(config project.Config, endpoints ...string) Manifest {
@@ -109,27 +138,22 @@ func (m *Manifest) SetDatabase(db string) {
 }
 
 // Stack descreve a combinação de forma legível, ex.: "python + fastapi + modular".
+// Partes vazias (comuns em projetos de arquitetura custom) são omitidas.
 func (m Manifest) Stack() string {
 	language := m.Language
 	if m.Runtime != "" {
 		language += "/" + m.Runtime
 	}
-	s := language + " + " + m.Framework + " + " + m.Architecture
-	if len(m.Databases) > 0 {
-		s += " + " + strings.Join(m.Databases, ", ")
-	} else if m.Database != "" {
-		s += " + " + m.Database
+	databases := strings.Join(m.Databases, ", ")
+	if databases == "" {
+		databases = m.Database
 	}
-	if m.ORM != "" {
-		s += " + " + m.ORM
-	}
-	return s
+	parts := slices.DeleteFunc([]string{language, m.Framework, m.Architecture, databases, m.ORM}, func(part string) bool { return part == "" })
+	return strings.Join(parts, " + ")
 }
 
 func Write(root string, m Manifest) error {
-	if m.Endpoints == nil {
-		m.Endpoints = []string{}
-	}
+	m.normalize()
 	content, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("codificar %s: %w", FileName, err)
@@ -145,17 +169,38 @@ func Read(path string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("ler %s: %w", path, err)
 	}
+	return parse(content, path)
+}
+
+// ReadFS lê o project.crud na raiz de fsys (ex.: a pasta de um template).
+func ReadFS(fsys fs.FS) (Manifest, error) {
+	content, err := fs.ReadFile(fsys, FileName)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("ler %s: %w", FileName, err)
+	}
+	return parse(content, FileName)
+}
+
+func parse(content []byte, label string) (Manifest, error) {
 	var m Manifest
 	if err := json.Unmarshal(content, &m); err != nil {
-		return Manifest{}, fmt.Errorf("%s inválido: %w", path, err)
+		return Manifest{}, fmt.Errorf("%s inválido: %w", label, err)
 	}
 	if m.Version != Version {
-		return Manifest{}, fmt.Errorf("%s: versão %d não suportada (esperado %d)", path, m.Version, Version)
+		return Manifest{}, fmt.Errorf("%s: versão %d não suportada (esperado %d)", label, m.Version, Version)
 	}
-	if m.Endpoints == nil {
-		m.Endpoints = []string{}
-	}
+	m.normalize()
 	return m, nil
+}
+
+// normalize troca listas nil por vazias, para o project.crud sempre ter as
+// mesmas chaves ("endpoints": [] em vez de null).
+func (m *Manifest) normalize() {
+	for _, list := range []*[]string{&m.Endpoints, &m.Endpoint.Files, &m.Endpoint.Register, &m.Ignore, &m.Directories, &m.Files} {
+		if *list == nil {
+			*list = []string{}
+		}
+	}
 }
 
 // Find procura o project.crud em dir e nos diretórios acima dele, devolvendo a

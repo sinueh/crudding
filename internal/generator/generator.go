@@ -3,13 +3,17 @@ package generator
 import (
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
 	"crudding/internal/generator/common"
+	"crudding/internal/generator/custom"
 	"crudding/internal/generator/langs/golang"
 	"crudding/internal/generator/langs/node"
 	"crudding/internal/generator/langs/python"
+	"crudding/internal/manifest"
 	"crudding/internal/project"
 )
 
@@ -96,4 +100,34 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 		return err
 	}
 	return common.Scaffold(destination, config, templates, plan)
+}
+
+// GenerateFromTemplate gera em destination o projeto projectName copiando a
+// estrutura listada no project.crud de templateDir (criada por "crudding
+// init"), sem passar pelo registry de linguagens.
+func GenerateFromTemplate(destination, projectName, templateDir string) error {
+	templateRoot, err := filepath.Abs(templateDir)
+	if err != nil {
+		return fmt.Errorf("resolver diretório do template: %w", err)
+	}
+	destinationRoot, err := filepath.Abs(destination)
+	if err != nil {
+		return fmt.Errorf("resolver diretório do projeto: %w", err)
+	}
+	if rel, err := filepath.Rel(templateRoot, destinationRoot); err == nil && filepath.IsLocal(rel) {
+		return fmt.Errorf("o projeto não pode ser gerado dentro da pasta do template (%s)", templateRoot)
+	}
+
+	templates := os.DirFS(templateRoot)
+	m, err := manifest.ReadFS(templates)
+	if err != nil {
+		return fmt.Errorf("template %s: %w", templateDir, err)
+	}
+	plan, err := custom.Plan(templates, m, projectName)
+	if err != nil {
+		return fmt.Errorf("template %s: %w", templateDir, err)
+	}
+	config := m.Config()
+	config.ProjectName = projectName
+	return common.Scaffold(destinationRoot, config, templates, plan)
 }

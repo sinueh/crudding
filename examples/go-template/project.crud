@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "go-template",
+  "language": "go",
+  "framework": "",
+  "architecture": "custom",
+  "endpoints": [
+    "item"
+  ],
+  "endpoint": {
+    "name": "item",
+    "files": [
+      "internal/item/handler.go"
+    ],
+    "register": [
+      "cmd/api/main.go"
+    ]
+  },
+  "ignore": [],
+  "directories": [
+    "cmd",
+    "cmd/api",
+    "internal",
+    "internal/health",
+    "internal/item"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "cmd/api/main.go",
+    "go.mod",
+    "internal/health/handler.go",
+    "internal/item/handler.go"
+  ]
+}

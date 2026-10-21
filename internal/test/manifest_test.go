@@ -110,3 +110,47 @@ func TestManifestWithORM(t *testing.T) {
 	}
 }
 
+func TestManifestTemplateFields(t *testing.T) {
+	root := t.TempDir()
+	m := manifest.Manifest{
+		Version:      manifest.Version,
+		Name:         "minha-api",
+		Architecture: manifest.CustomArchitecture,
+		Template:     "go-template",
+		Ignore:       []string{".git", "*.log"},
+		Directories:  []string{"cmd"},
+		Files:        []string{"cmd/main.go", "go.mod"},
+	}
+	if err := manifest.Write(root, m); err != nil {
+		t.Fatal(err)
+	}
+	read, err := manifest.ReadFS(os.DirFS(root))
+	if err != nil {
+		t.Fatalf("ReadFS() error = %v", err)
+	}
+	if read.Template != m.Template || strings.Join(read.Ignore, ",") != ".git,*.log" || strings.Join(read.Directories, ",") != "cmd" || strings.Join(read.Files, ",") != "cmd/main.go,go.mod" {
+		t.Errorf("ReadFS() = %+v", read)
+	}
+	if got := read.Stack(); got != "custom" {
+		t.Errorf("Stack() sem linguagem e framework = %q, want %q", got, "custom")
+	}
+	read.Language = "go"
+	if got := read.Stack(); got != "go + custom" {
+		t.Errorf("Stack() = %q", got)
+	}
+
+	// Todo project.crud segue o mesmo padrão: as listas aparecem mesmo vazias,
+	// e "template" só existe em projetos gerados de um template.
+	if err := manifest.Write(root, manifest.New(project.Config{ProjectName: "demo", Language: "go", Framework: "raw", Architecture: "flat"})); err != nil {
+		t.Fatal(err)
+	}
+	content, _ := os.ReadFile(filepath.Join(root, manifest.FileName))
+	for _, key := range []string{`"endpoints": []`, `"endpoint": {`, `"name": ""`, `"register": []`, `"ignore": []`, `"directories": []`, `"files": []`} {
+		if !strings.Contains(string(content), key) {
+			t.Errorf("project.crud não contém %s:\n%s", key, content)
+		}
+	}
+	if strings.Contains(string(content), `"template"`) {
+		t.Errorf("project.crud embutido contém \"template\":\n%s", content)
+	}
+}

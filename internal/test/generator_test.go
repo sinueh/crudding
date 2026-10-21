@@ -23,8 +23,8 @@ var requiredFiles = map[string]map[string][]string{
 		"flat":       {"main.go", "routes.go", "user_model.go", "user_types.go", "user_service.go", "user_handler.go", "config/config.go"},
 		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/service/user.go", "internal/types/user.go", "internal/models/user.go", "internal/config/config.go"},
 		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/user/handler.go", "internal/user/service.go", "internal/user/types.go", "internal/user/model.go", "internal/config/config.go"},
-		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/types.go", "internal/config/config.go"},
-		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/types.go", "internal/config/config.go"},
+		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/user_repository.go", "internal/ports/user_service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/user_types.go", "internal/config/config.go"},
+		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/user_repository.go", "internal/ports/user_service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/user_types.go", "internal/config/config.go"},
 	},
 	"node": {
 		"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},

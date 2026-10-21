@@ -39,6 +39,9 @@ func AddDatabase(root string, m manifest.Manifest, db string, templates fs.FS) (
 	if err := ValidateDatabase(db); err != nil {
 		return common.Result{}, err
 	}
+	if m.Architecture == manifest.CustomArchitecture {
+		return common.Result{}, fmt.Errorf("add db ainda não é suportado para projetos de arquitetura %s", manifest.CustomArchitecture)
+	}
 
 	if m.HasDatabase(db) {
 		return common.Result{}, fmt.Errorf("o projeto já possui o banco de dados %q configurado", db)
@@ -63,6 +66,9 @@ func AddDatabase(root string, m manifest.Manifest, db string, templates fs.FS) (
 		updated = onDisk
 	}
 	updated.AddDatabase(db)
+	if err := common.RecordCreated(&updated, result.Created); err != nil {
+		return common.Result{}, err
+	}
 	if err := manifest.Write(root, updated); err != nil {
 		return common.Result{}, err
 	}

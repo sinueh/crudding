@@ -50,21 +50,27 @@ crudding/
 │   │   ├── new.go               # Comando padrão de criação de projeto (runNew)
 │   │   ├── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
 │   │   ├── add_db.go            # Comando "crudding add db" (runAddDB)
+│   │   ├── init.go              # Comando "crudding init" (runInit)
+│   │   ├── template.go          # Comando "crudding template" (runTemplate)
 │   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
 │   ├── generator/
 │   │   ├── common/
 │   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
 │   │   │   ├── scaffold.go      # Criação do projeto (Plan) e gravação do project.crud
+│   │   │   ├── structure.go     # ListStructure (walk com ignore) e RecordCreated/RecordRemoved para directories/files
 │   │   │   ├── patch.go         # Alterações em projeto existente (Patch): arquivos novos, pacotes Python e inserções em markers, com rollback
 │   │   │   └── remove.go        # Remoção de endpoint (RemovalPlan): exclusão de arquivos, limpeza de linhas e diretórios vazios
+│   │   ├── custom/
+│   │   │   ├── init.go          # Init: grava/atualiza directories e files no project.crud
+│   │   │   ├── endpoint.go      # add/remove endpoint a partir do campo "endpoint" (endpoint de exemplo)
+│   │   │   └── template.go      # Plan de "crudding template": cópia com troca de nome; Unlisted
 │   │   ├── langs/
 │   │   │   ├── golang/
-│   │   │   │   ├── generate.go  # Gerador específico para projetos Go
-│   │   │   │   └── endpoint.go  # Layouts de "add endpoint" e "remove endpoint" por arquitetura Go
+│   │   │   │   └── generate.go  # Gerador Go; declara o endpoint de exemplo (user) por arquitetura
 │   │   │   ├── node/generate.go   # Gerador específico para projetos Node (JS/TS)
 │   │   │   └── python/
 │   │   │       ├── generate.go   # Gerador específico para projetos Python
-│   │   │       └── endpoint.go   # Layouts de "add endpoint" e "remove endpoint" por arquitetura Python
+│   │   │       └── sample.go     # Endpoint de exemplo (resource) por arquitetura: arquivos e campo endpoint
 │   │   ├── database.go          # Dispatcher de "crudding add db"
 │   │   ├── generator.go         # Dispatcher central do gerador
 │   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint" e "crudding remove endpoint"
@@ -80,6 +86,8 @@ crudding/
 ├── templates/                   # Arquivos de template (.tmpl) para cada stack
 │   ├── databases/               # Templates de banco (postgres, mysql, mongo): compose, env, migrations, conexão
 │   └── langs/                   # Templates de linguagens (go, node, python)
+├── examples/
+│   └── go-template/             # Projeto-template de exemplo (documentação e fixture de teste; não é embutido)
 ├── assets.go                    # Declaração do embed.FS para a pasta templates/
 ├── go.mod                       # Definição de módulo e dependências
 ├── go.sum
@@ -108,23 +116,23 @@ crudding/
    - Processa os templates embutidos utilizando `text/template` e grava no diretório de destino.
    - Em caso de falha no meio do processo, o diretório gerado é limpo automaticamente (`defer os.RemoveAll`).
 
-4. **Manifesto**: `common.Scaffold` grava `project.crud` (JSON, `internal/manifest`) na raiz de todo projeto gerado.
+4. **Manifesto**: `common.Scaffold` grava `project.crud` (JSON, `internal/manifest`) na raiz de todo projeto gerado, por último, com `ignore` vazio e `directories`/`files` listando a estrutura gerada (`common.ListStructure`). Todo `project.crud` tem as mesmas chaves do gerado por `crudding init`: listas vazias são gravadas como `[]` (`Manifest.normalize`).
 
 ### `crudding add endpoint`
 
 1. `manifest.Find` procura o `project.crud` a partir do diretório atual, subindo pelos pais.
-2. `generator.CheckEndpointSupport` valida o manifesto contra o registry e confirma que a linguagem tem `endpoint` (suportado em Python e Go; Node devolve "ainda não suportado").
+2. `generator.CheckEndpointSupport` confirma que o campo `endpoint` do manifesto está preenchido e válido. Não há código por linguagem ou arquitetura para criar endpoints: tudo sai desse campo (ver "Campo `endpoint`" abaixo).
 3. `project.ReadEndpointName` lê o nome (snake_case).
-4. A função `endpoint` da linguagem monta um `common.Patch`: os templates necessários, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
-5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, cada marker aparece uma única vez) e desfaz as alterações se a gravação falhar.
+4. `custom.EndpointPatch` monta um `common.Patch` copiando o endpoint de exemplo (`Raw`) e duplicando as linhas dele nos arquivos de `register` (`Rewrites`).
+5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, todo arquivo de `register` menciona o exemplo) e desfaz as alterações se a gravação falhar.
 
 ### `crudding remove endpoint`
 
 1. `manifest.Find` localiza a raiz do projeto e lê o `project.crud`.
-2. `generator.CheckEndpointSupport` confirma suporte à linguagem.
+2. `generator.CheckEndpointSupport` confirma que o campo `endpoint` está preenchido.
 3. `project.ReadEndpointName` lê o nome (ou via argumentos `name:<nome>`, `n:<nome>` ou posicional).
 4. Verifica se o endpoint está registrado no `project.crud`.
-5. A função `removePlan` da linguagem monta um `common.RemovalPlan`: arquivos a deletar, diretórios que devem ser excluídos se ficarem vazios e linhas a remover dos arquivos de rotas/imports.
+5. `custom.EndpointRemovalPlan` monta um `common.RemovalPlan`: as cópias a deletar, as pastas que devem ser excluídas se ficarem vazias e as linhas duplicadas nos arquivos de `register`.
 6. `common.Remove` remove os arquivos, limpa as linhas das rotas, limpa pastas vazias e atualiza o manifesto `project.crud` com rollback caso haja erro na gravação.
 
 ### `crudding add db <postgres|mysql|mongo>`
@@ -139,7 +147,33 @@ crudding/
 4. `common.Apply` valida a ausência de conflitos e grava os arquivos.
 5. Atualiza dependências (`go.mod`, `requirements.txt` ou `package.json`) com os drivers do banco e atualiza o manifesto `project.crud` com o banco adicionado.
 
-**Para suportar uma nova linguagem**: implemente `endpoint` e `removePlan` em `internal/generator/langs/<lang>/endpoint.go`, registre-os em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates correspondentes. Os markers não podem ser removidos dos templates existentes.
+**Para uma linguagem ou arquitetura ter `add endpoint`**: o `Plan` do gerador deve gerar um endpoint de exemplo e preencher `common.Plan.Endpoint` (`name`, `files`, `register`), como fazem `langs/golang/generate.go` (`user`) e `langs/python/sample.go` (`resource`). O exemplo precisa de três coisas:
+- todo arquivo dele tem o nome do exemplo no caminho;
+- o registro (rotas, imports, injeção de dependência) fica em linhas únicas que mencionam o exemplo, nos arquivos de `register`;
+- nenhuma declaração de várias linhas do exemplo fica num arquivo compartilhado (por isso, no Go hexagonal/clean_arch, os DTOs e ports ficam em `user_types.go`, `user_repository.go` e `user_service.go`).
+
+O `TestEndpointRoundTripAllCombinations` confere isso em todas as combinações. Node ainda não gera o campo. Os markers `crudding:db-*`, `crudding:compose-*` e `crudding:env` são do `add db` e não podem ser removidos dos templates.
+
+### `crudding init` e `crudding template <pasta> [nome]` (projetos-template)
+
+Caminho paralelo ao registry: qualquer projeto vira template, e a estrutura fica no próprio `project.crud`. O formato está documentado no `README.md` e exemplificado em `examples/go-template/`.
+
+1. `custom.Init` grava (ou atualiza) o `project.crud` do diretório atual. Num manifesto novo: `name` = nome da pasta, `architecture: "custom"` e `ignore` vazio (nada é preenchido automaticamente, nem a partir do `.gitignore`). Em seguida chama `common.ListStructure`, que aplica o `ignore` e sempre pula `project.crud` e `.git`, e grava `directories` e `files`. Rodar de novo só regenera essas duas listas.
+2. `crudding template` lê o manifesto com `manifest.ReadFS`, avisa sobre arquivos fora de `files` (`custom.Unlisted`) e chama `generator.GenerateFromTemplate`.
+3. `custom.Plan` lê e valida tudo antes de gravar e troca o `name` do template pelo nome novo (exata, slug e snake_case) nos caminhos e no conteúdo de texto. O `Prepare` grava as pastas e os arquivos (só o bit de execução é preservado). `Plan.Manifest` faz o `common.Scaffold` gravar o manifesto herdado do template, com `name`, `template` e os caminhos trocados.
+4. `add db` recusa `architecture: "custom"` (`AddDatabase`). `add/remove endpoint` dependem só do campo `endpoint`, como em qualquer projeto.
+
+### Campo `endpoint` (endpoints personalizados)
+
+É o único mecanismo de `add/remove endpoint` (`generator.AddEndpoint`/`RemoveEndpoint` chamam `custom.EndpointPatch`/`custom.EndpointRemovalPlan`). Os projetos gerados já trazem o campo apontando para o endpoint de exemplo.
+
+- O `add` copia `files` do endpoint de exemplo (`name`) trocando o nome por snake/kebab/Pascal/camel (`common.Patch.Raw`). Num exemplo de uma palavra só, o nome seguido de maiúscula (`userRepo`) conta como camelCase. Palavras reservadas da linguagem são recusadas (`reservedNames`). Em cada arquivo de `register`, repete logo abaixo cada bloco de linhas consecutivas que menciona o exemplo (`common.Patch.Rewrites`).
+- O `remove` apaga as cópias, as pastas cujo caminho mudou com o nome e as linhas repetidas (`common.RemovalPlan`).
+- Linhas que mencionam outro endpoint cujo nome contém o do exemplo (`order_item` com exemplo `item`) não contam como do exemplo (`endpointRecipe.others`).
+- O próprio exemplo não pode ser adicionado nem removido.
+- `AddEndpoint`, `RemoveEndpoint` e `AddDatabase` mantêm `files`/`directories` em dia com `common.RecordCreated`/`RecordRemoved`, em qualquer projeto.
+
+Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`fs.ValidPath`, `filepath.IsLocal`, `project.crud` reservado), symlinks são rejeitados e o destino não pode ficar dentro da pasta do template. Não relaxe essas verificações.
 
 ---
 
@@ -149,6 +183,10 @@ crudding/
 ```sh
 # Executar a CLI em desenvolvimento
 go run ./cmd/crudding
+
+# Transformar o projeto atual em template e gerar um projeto a partir dele
+go run /caminho/do/crudding/cmd/crudding init
+go run /caminho/do/crudding/cmd/crudding template ./examples/go-template meu-app
 
 # Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
 go run /caminho/do/crudding/cmd/crudding add endpoint

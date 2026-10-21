@@ -36,6 +36,16 @@ var commands = []Command{
 		Run:     runNew,
 	},
 	{
+		Args:    "init",
+		Summary: "grava no diretório atual um project.crud com a estrutura do projeto, para usá-lo como template",
+		Run:     runInit,
+	},
+	{
+		Args:    "template",
+		Summary: "gera um novo projeto a partir de um projeto-template (crudding template <pasta> [nome])",
+		Run:     runTemplate,
+	},
+	{
 		Args:    "stacks",
 		Summary: "lista as linguagens, runtimes, frameworks e arquiteturas suportadas",
 		Run:     runStacks,

@@ -759,3 +759,78 @@ func TestCLIInfoDraw(t *testing.T) {
 		}
 	}
 }
+
+func TestCLIInit(t *testing.T) {
+	root := newTemplateDir(t, "meu-projeto", map[string]string{"main.go": "package main\n", ".env": "SECRET=1"})
+	chdirTemp(t, root)
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"init"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(init) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "project.crud gravado") {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+	_, m, err := manifest.Find(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Name != "meu-projeto" || m.Architecture != manifest.CustomArchitecture || strings.Join(m.Files, ",") != ".env,main.go" || len(m.Ignore) != 0 {
+		t.Errorf("manifesto = %+v", m)
+	}
+
+	writeFile(t, root, "novo.go", "package main\n")
+	if code := cli.Run([]string{"init"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(init) de novo: exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if _, m, _ = manifest.Find(root); strings.Join(m.Files, ",") != ".env,main.go,novo.go" {
+		t.Errorf("Files após rodar de novo = %v", m.Files)
+	}
+
+	stderr.Reset()
+	if code := cli.Run([]string{"init", "extra"}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "argumentos inesperados") {
+		t.Errorf("Run(init extra) = %d, stderr = %q", code, stderr.String())
+	}
+}
+
+func TestCLITemplate(t *testing.T) {
+	templateDir := copyExampleTemplate(t)
+	writeFile(t, templateDir, "NOTAS.md", "criado depois do init\n")
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	args := []string{"template", templateDir, "n:minha-api"}
+	if code := cli.Run(args, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(%v) exit code = %d, stderr = %q", args, code, stderr.String())
+	}
+	for _, snippet := range []string{"Aviso: 1 arquivo", "NOTAS.md", "Projeto gerado em", "Template: go-template"} {
+		if !strings.Contains(stdout.String(), snippet) {
+			t.Errorf("stdout não contém %q:\n%s", snippet, stdout.String())
+		}
+	}
+	assertFileContains(t, filepath.Join(tmp, "minha-api"), "go.mod", "module minha-api")
+	assertFilesAbsent(t, filepath.Join(tmp, "minha-api"), "NOTAS.md")
+
+	for _, testCase := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"template"}, "nenhuma pasta de template"},
+		{[]string{"template", filepath.Join(tmp, "nao-existe"), "outro"}, manifest.FileName},
+		{[]string{"template", templateDir, "a/b"}, "nome inválido"},
+		{[]string{"template", templateDir, "outro", "extra"}, "argumentos inesperados"},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run(testCase.args, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), testCase.want) {
+			t.Errorf("Run(%v) = %d, stderr = %q, want contendo %q", testCase.args, code, stderr.String(), testCase.want)
+		}
+	}
+	assertFilesAbsent(t, tmp, "outro")
+
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template <pasta>") {
+		t.Errorf("Run(template -h) = %d, stdout = %q", code, stdout.String())
+	}
+}
