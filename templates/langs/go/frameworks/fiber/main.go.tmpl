@@ -4,11 +4,9 @@ import (
 	"log"
 {{if not (eq .Architecture "flat")}}
 	"{{.GoModule}}/internal/routes"
-{{end}}	// crudding:imports
-)
+{{end}})
 
 func main() {
-	// crudding:di
 {{if eq .Architecture "flat"}}	app := SetupRouter()
 {{else}}	app := routes.SetupRouter()
 {{end}}

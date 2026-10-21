@@ -93,7 +93,7 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		)
 	case "modular":
 		packages = append(packages,
-			path.Join(pkgDir, "resource"),
+			path.Join(pkgDir, sampleName),
 		)
 	case "hexagonal":
 		packages = append(packages,
@@ -115,14 +115,14 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		)
 	}
 
-	seedPatch, err := endpointPatchForPackage(pkgDir, config, "resource")
+	sample, err := newSample(pkgDir, config)
 	if err != nil {
 		return common.Plan{}, err
 	}
-	files = append(files, seedPatch.Files...)
-	packages = append(packages, seedPatch.Packages...)
+	files = append(files, sample.files...)
+	packages = append(packages, sample.packages...)
 
-	data := seedPatch.Data.(templateData)
+	data := sample.data
 	deps := slices.Clone(FrameworkDependencies[config.Framework])
 	if config.Database != "" {
 		switch config.Database {
@@ -142,11 +142,13 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	data.EntryModule = module(entryScript)
 	data.ProjectName = strings.ReplaceAll(filepath.Base(destination), "_", "-")
 
+	endpoint := sample.endpoint
+	endpoint.Register = []string{entryScript}
 	return common.Plan{
 		Files:     files,
 		Data:      data,
-		Inserts:   seedPatch.Inserts,
-		Endpoints: []string{"resource"},
+		Endpoints: []string{sampleName},
+		Endpoint:  endpoint,
 		Prepare:   func(root string) error { return common.CreatePackages(root, packages, nil) },
 	}, nil
 }

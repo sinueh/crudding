@@ -20,13 +20,29 @@ type Insert struct {
 	Lines  []string
 }
 
+// RawFile é um arquivo novo com o conteúdo já pronto (sem template).
+type RawFile struct {
+	OutputPath string // relativo à raiz do projeto, com "/"
+	Content    []byte
+}
+
+// Rewrite reescreve um arquivo existente: Edit recebe o conteúdo atual (já com
+// as Inserts aplicadas) e devolve o novo.
+type Rewrite struct {
+	Path string // relativo à raiz do projeto, com "/"
+	Edit func(content []byte) ([]byte, error)
+}
+
 // Patch descreve alterações em um projeto já gerado: arquivos novos a partir
-// de templates, pacotes Python a criar e inserções em arquivos existentes.
+// de templates ou com conteúdo pronto, pacotes Python a criar, inserções em
+// markers e reescritas de arquivos existentes.
 type Patch struct {
 	Files    []File
+	Raw      []RawFile
 	Data     any
 	Packages []string // diretórios que devem existir com __init__.py
 	Inserts  []Insert
+	Rewrites []Rewrite
 }
 
 // Result lista os caminhos (relativos à raiz) criados e alterados por Apply.
@@ -36,15 +52,21 @@ type Result struct {
 }
 
 // Apply valida o Patch inteiro antes de tocar no disco (nenhum arquivo novo pode
-// existir, todo marker aparece uma única vez e todos os templates renderizam).
-// Se a gravação falhar no meio, desfaz o que já tinha sido feito.
+// existir, todo marker aparece uma única vez, todos os templates renderizam e
+// todas as reescritas funcionam). Se a gravação falhar no meio, desfaz o que
+// já tinha sido feito.
 func Apply(root string, templates fs.FS, patch Patch) (result Result, err error) {
-	contents := make([][]byte, len(patch.Files))
-	for index, file := range patch.Files {
-		if err := ensureAbsent(root, file.OutputPath); err != nil {
+	writes := make([]RawFile, 0, len(patch.Files)+len(patch.Raw))
+	for _, file := range patch.Files {
+		content, err := render(templates, file.TemplatePath, patch.Data)
+		if err != nil {
 			return Result{}, err
 		}
-		if contents[index], err = render(templates, file.TemplatePath, patch.Data); err != nil {
+		writes = append(writes, RawFile{OutputPath: file.OutputPath, Content: content})
+	}
+	writes = append(writes, patch.Raw...)
+	for _, file := range writes {
+		if err := ensureAbsent(root, file.OutputPath); err != nil {
 			return Result{}, err
 		}
 	}
@@ -52,16 +74,30 @@ func Apply(root string, templates fs.FS, patch Patch) (result Result, err error)
 	originals := map[string][]byte{}
 	edited := map[string][]byte{}
 	var editOrder []string
-	for _, insert := range patch.Inserts {
-		current, ok := edited[insert.Path]
+	edit := func(rel string, change func([]byte) ([]byte, error)) error {
+		current, ok := edited[rel]
 		if !ok {
-			if current, err = os.ReadFile(filepath.Join(root, filepath.FromSlash(insert.Path))); err != nil {
-				return Result{}, fmt.Errorf("ler %s: %w", insert.Path, err)
+			var readErr error
+			if current, readErr = os.ReadFile(filepath.Join(root, filepath.FromSlash(rel))); readErr != nil {
+				return fmt.Errorf("ler %s: %w", rel, readErr)
 			}
-			originals[insert.Path] = current
-			editOrder = append(editOrder, insert.Path)
+			originals[rel] = current
+			editOrder = append(editOrder, rel)
 		}
-		if edited[insert.Path], err = insertBefore(current, insert); err != nil {
+		changed, changeErr := change(current)
+		if changeErr != nil {
+			return changeErr
+		}
+		edited[rel] = changed
+		return nil
+	}
+	for _, insert := range patch.Inserts {
+		if err := edit(insert.Path, func(content []byte) ([]byte, error) { return insertBefore(content, insert) }); err != nil {
+			return Result{}, err
+		}
+	}
+	for _, rewrite := range patch.Rewrites {
+		if err := edit(rewrite.Path, rewrite.Edit); err != nil {
 			return Result{}, err
 		}
 	}
@@ -82,12 +118,12 @@ func Apply(root string, templates fs.FS, patch Patch) (result Result, err error)
 	if err = CreatePackages(root, patch.Packages, &created); err != nil {
 		return Result{}, err
 	}
-	for index, file := range patch.Files {
+	for _, file := range writes {
 		if err = mkdirAll(root, path.Dir(file.OutputPath), &created); err != nil {
 			return Result{}, err
 		}
 		target := filepath.Join(root, filepath.FromSlash(file.OutputPath))
-		if err = writeNew(target, contents[index]); err != nil {
+		if err = writeNew(target, file.Content); err != nil {
 			return Result{}, fmt.Errorf("gravar arquivo %s: %w", file.OutputPath, err)
 		}
 		created = append(created, target)

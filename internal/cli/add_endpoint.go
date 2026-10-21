@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	"crudding"
 	"crudding/internal/generator"
 	"crudding/internal/generator/common"
 	"crudding/internal/manifest"
@@ -20,8 +19,10 @@ import (
 func AddEndpointUsage() string {
 	var b strings.Builder
 	b.WriteString("como funciona:\n")
-	b.WriteString("  Gera os arquivos de um novo endpoint CRUD (model, service, handler/controller,\n")
-	b.WriteString("  rotas) e registra nos pontos de extensão do projeto e no project.crud.\n")
+	b.WriteString("  Cria um endpoint novo a partir do campo \"endpoint\" do project.crud: copia os\n")
+	b.WriteString("  arquivos do endpoint de exemplo trocando o nome, duplica as linhas dele nos\n")
+	b.WriteString("  arquivos de \"register\" (rotas, imports) e atualiza o project.crud.\n")
+	b.WriteString("  - Projetos gerados pelo crudding já vêm com o campo preenchido.\n")
 	b.WriteString("  - Sem argumentos (\"crudding add endpoint\"), solicita o nome interativamente.\n")
 	b.WriteString("  - Com argumento, cria o endpoint diretamente.\n\n")
 	b.WriteString("uso:\n")
@@ -118,7 +119,7 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 		}
 	}
 
-	result, err := generator.AddEndpoint(root, m, name, crudding.Templates)
+	result, err := generator.AddEndpoint(root, m, name)
 	if err != nil {
 		return err
 	}

@@ -10,8 +10,7 @@ import (
 {{else if eq .Architecture "clean_arch"}}	"{{.GoModule}}/internal/application"
 	"{{.GoModule}}/internal/handlers"
 	"{{.GoModule}}/internal/infrastructure/persistence"
-{{end}}	// crudding:imports
-	"github.com/gofiber/fiber/v2"
+{{end}}	"github.com/gofiber/fiber/v2"
 )
 
 func SetupRouter() *fiber.App {
@@ -34,7 +33,6 @@ func SetupRouter() *fiber.App {
 	api.Get("/users", userHandler.List)
 	api.Get("/users/:id", userHandler.GetByID)
 	api.Delete("/users/:id", userHandler.Delete)
-	// crudding:routes
 
 	return app
 }

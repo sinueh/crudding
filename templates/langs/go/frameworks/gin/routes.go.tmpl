@@ -10,8 +10,7 @@ import (
 {{else if eq .Architecture "clean_arch"}}	"{{.GoModule}}/internal/application"
 	"{{.GoModule}}/internal/handlers"
 	"{{.GoModule}}/internal/infrastructure/persistence"
-{{end}}	// crudding:imports
-	"github.com/gin-gonic/gin"
+{{end}}	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter() *gin.Engine {
@@ -35,7 +34,6 @@ func SetupRouter() *gin.Engine {
 		api.GET("/users", userHandler.List)
 		api.GET("/users/:id", userHandler.GetByID)
 		api.DELETE("/users/:id", userHandler.Delete)
-		// crudding:routes
 	}
 
 	return r

@@ -2,65 +2,60 @@ package generator
 
 import (
 	"fmt"
-	"io/fs"
 	"path/filepath"
 
 	"crudding/internal/generator/common"
+	"crudding/internal/generator/custom"
 	"crudding/internal/manifest"
 )
 
-// CheckEndpointSupport valida o manifesto e confirma que a linguagem suporta
-// "add endpoint", para a CLI falhar antes de pedir o nome ao usuário.
+// CheckEndpointSupport confirma que o project.crud tem o campo endpoint
+// preenchido e válido, para a CLI falhar antes de pedir o nome ao usuário.
 func CheckEndpointSupport(m manifest.Manifest) error {
-	_, err := endpointLanguage(m)
-	return err
+	if !m.Endpoint.Defined() {
+		return fmt.Errorf("o campo \"endpoint\" do %s está vazio: preencha name, files e register com o endpoint de exemplo do projeto para usar add endpoint e remove endpoint", manifest.FileName)
+	}
+	return custom.CheckEndpoint(m)
 }
 
-// AddEndpoint cria um novo recurso CRUD no projeto em root, de acordo com a
-// combinação registrada no project.crud, registra o endpoint no roteamento
-// existente e atualiza o array de endpoints em project.crud.
-func AddEndpoint(root string, m manifest.Manifest, name string, templates fs.FS) (common.Result, error) {
-	language, err := endpointLanguage(m)
+// AddEndpoint cria o endpoint name no projeto em root copiando o endpoint de
+// exemplo do campo endpoint do project.crud, e registra o novo endpoint em
+// endpoints, files e directories.
+func AddEndpoint(root string, m manifest.Manifest, name string) (common.Result, error) {
+	m = current(root, m)
+	if err := CheckEndpointSupport(m); err != nil {
+		return common.Result{}, err
+	}
+	patch, err := custom.EndpointPatch(root, m, name)
 	if err != nil {
 		return common.Result{}, err
 	}
-	patch, err := language.endpoint(root, m.Config(), name)
-	if err != nil {
-		return common.Result{}, err
-	}
-	result, err := common.Apply(root, templates, patch)
+	result, err := common.Apply(root, nil, patch)
 	if err != nil {
 		return common.Result{}, err
 	}
 
-	updated := m
-	if onDisk, readErr := manifest.Read(filepath.Join(root, manifest.FileName)); readErr == nil {
-		for _, ep := range onDisk.Endpoints {
-			updated.AddEndpoint(ep)
-		}
+	m.AddEndpoint(name)
+	if err := common.RecordCreated(&m, result.Created); err != nil {
+		return common.Result{}, err
 	}
-	updated.AddEndpoint(name)
-	if err := manifest.Write(root, updated); err != nil {
+	if err := manifest.Write(root, m); err != nil {
 		return common.Result{}, err
 	}
 	return result, nil
 }
 
-// RemoveEndpoint remove um recurso CRUD do projeto em root, limpa as linhas de
-// rota inseridas no roteador e atualiza o array de endpoints em project.crud.
+// RemoveEndpoint desfaz o AddEndpoint de name: remove as cópias do endpoint de
+// exemplo e as linhas de registro, e atualiza o project.crud.
 func RemoveEndpoint(root string, m manifest.Manifest, name string) (common.RemoveResult, error) {
-	language, err := endpointLanguage(m)
-	if err != nil {
+	m = current(root, m)
+	if err := CheckEndpointSupport(m); err != nil {
 		return common.RemoveResult{}, err
-	}
-	if language.removePlan == nil {
-		return common.RemoveResult{}, fmt.Errorf("remove endpoint ainda não suportado para %s", language.Label)
 	}
 	if !m.HasEndpoint(name) {
 		return common.RemoveResult{}, fmt.Errorf("endpoint %q não encontrado em %s", name, manifest.FileName)
 	}
-
-	plan, err := language.removePlan(root, m.Config(), name)
+	plan, err := custom.EndpointRemovalPlan(root, m, name)
 	if err != nil {
 		return common.RemoveResult{}, err
 	}
@@ -69,27 +64,21 @@ func RemoveEndpoint(root string, m manifest.Manifest, name string) (common.Remov
 		return common.RemoveResult{}, err
 	}
 
-	updated := m
-	if onDisk, readErr := manifest.Read(filepath.Join(root, manifest.FileName)); readErr == nil {
-		updated = onDisk
-	}
-	updated.RemoveEndpoint(name)
-	if err := manifest.Write(root, updated); err != nil {
+	m.RemoveEndpoint(name)
+	common.RecordRemoved(root, &m, result.Removed)
+	if err := manifest.Write(root, m); err != nil {
 		return common.RemoveResult{}, err
 	}
 	return result, nil
 }
 
-func endpointLanguage(m manifest.Manifest) (Language, error) {
-	language, ok := Lookup(m.Language)
-	if !ok {
-		return Language{}, fmt.Errorf("linguagem não suportada: %s", m.Language)
+// current devolve o project.crud em disco, que pode ter mudado desde que m foi
+// lido (ex.: por outro add endpoint), mantendo o campo endpoint de m.
+func current(root string, m manifest.Manifest) manifest.Manifest {
+	onDisk, err := manifest.Read(filepath.Join(root, manifest.FileName))
+	if err != nil {
+		return m
 	}
-	if err := language.validate(m.Config()); err != nil {
-		return Language{}, fmt.Errorf("%s inválido: %w", manifest.FileName, err)
-	}
-	if language.endpoint == nil {
-		return Language{}, fmt.Errorf("add endpoint ainda não suportado para %s", language.Label)
-	}
-	return language, nil
+	onDisk.Endpoint = m.Endpoint
+	return onDisk
 }

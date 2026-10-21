@@ -15,10 +15,10 @@ import django
 django.setup()
 
 from django.urls import include, path
-# crudding:imports
+from {{.Modules.controller}} import urlpatterns as {{.Name}}_urls
 
 urlpatterns = [
-    # crudding:routes
+    path("{{.Route}}/", include({{.Name}}_urls)),
 ]
 
 if __name__ == "__main__":

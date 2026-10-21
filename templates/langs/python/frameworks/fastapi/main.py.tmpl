@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-# crudding:imports
+from {{.Modules.controller}} import router as {{.Name}}_router
 
 app = FastAPI(title="{{.ProjectName}}")
 
-# crudding:routes
+app.include_router({{.Name}}_router, prefix="/{{.Route}}", tags=["{{.Class}}"])
 
 if __name__ == "__main__":
     import uvicorn

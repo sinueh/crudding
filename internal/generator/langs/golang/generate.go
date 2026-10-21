@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"crudding/internal/generator/common"
+	"crudding/internal/manifest"
 	"crudding/internal/project"
 )
 
@@ -22,16 +23,62 @@ type templateData struct {
 	VarName  string
 }
 
+// sampleName é o endpoint de exemplo gerado em todo projeto Go. O campo
+// endpoint do project.crud aponta para ele, e o "crudding add endpoint" copia
+// seus arquivos.
+const sampleName = "user"
+
+// sampleFile é um arquivo do endpoint de exemplo. O template fica em
+// base/common, ou no framework quando framework é true.
+type sampleFile struct {
+	template  string
+	output    string
+	framework bool
+}
+
 type architecture struct {
-	main string
+	main   string
+	routes string // arquivo de rotas, onde o exemplo é registrado
+	sample []sampleFile
 }
 
 var architectures = map[string]architecture{
-	"flat":       {main: "main.go"},
-	"layered":    {main: "cmd/api/main.go"},
-	"modular":    {main: "cmd/api/main.go"},
-	"hexagonal":  {main: "cmd/api/main.go"},
-	"clean_arch": {main: "cmd/api/main.go"},
+	"flat": {main: "main.go", routes: "routes.go", sample: []sampleFile{
+		{template: "model.go", output: "user_model.go"},
+		{template: "types.go", output: "user_types.go"},
+		{template: "service.go", output: "user_service.go"},
+		{template: "handler.go", output: "user_handler.go", framework: true},
+	}},
+	"layered": {main: "cmd/api/main.go", routes: "internal/routes/routes.go", sample: []sampleFile{
+		{template: "model.go", output: "internal/models/user.go"},
+		{template: "types.go", output: "internal/types/user.go"},
+		{template: "service.go", output: "internal/service/user.go"},
+		{template: "handler.go", output: "internal/handlers/user.go", framework: true},
+	}},
+	"modular": {main: "cmd/api/main.go", routes: "internal/routes/routes.go", sample: []sampleFile{
+		{template: "model.go", output: "internal/user/model.go"},
+		{template: "types.go", output: "internal/user/types.go"},
+		{template: "service.go", output: "internal/user/service.go"},
+		{template: "handler.go", output: "internal/user/handler.go", framework: true},
+	}},
+	"hexagonal": {main: "cmd/api/main.go", routes: "internal/routes/routes.go", sample: []sampleFile{
+		{template: "model.go", output: "internal/domain/user.go"},
+		{template: "types.go", output: "internal/domain/user_types.go"},
+		{template: "ports_repository.go", output: "internal/ports/user_repository.go"},
+		{template: "ports_service.go", output: "internal/ports/user_service.go"},
+		{template: "service.go", output: "internal/application/user.go"},
+		{template: "repository.go", output: "internal/adapters/postgres/user.go"},
+		{template: "handler.go", output: "internal/handlers/user.go", framework: true},
+	}},
+	"clean_arch": {main: "cmd/api/main.go", routes: "internal/routes/routes.go", sample: []sampleFile{
+		{template: "model.go", output: "internal/domain/user.go"},
+		{template: "types.go", output: "internal/domain/user_types.go"},
+		{template: "ports_repository.go", output: "internal/ports/user_repository.go"},
+		{template: "ports_service.go", output: "internal/ports/user_service.go"},
+		{template: "service.go", output: "internal/application/user.go"},
+		{template: "repository.go", output: "internal/infrastructure/persistence/user.go"},
+		{template: "handler.go", output: "internal/handlers/user.go", framework: true},
+	}},
 }
 
 // Plan monta o projeto Go. Framework e arquitetura já foram validados pelo
@@ -57,69 +104,30 @@ func Plan(_ string, config project.Config) (common.Plan, error) {
 		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
 		{TemplatePath: path.Join(commonDir, "config.go.tmpl"), OutputPath: configOutput},
 		{TemplatePath: path.Join(fwDir, "main.go.tmpl"), OutputPath: arch.main},
+		{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: arch.routes},
 	}
-
 	if config.Database != "" {
 		files = append(files, common.DatabaseFiles(config.Database)...)
 	}
 
-	switch config.Architecture {
-	case "flat":
-		files = append(files,
-			common.File{TemplatePath: path.Join(commonDir, "model.go.tmpl"), OutputPath: "user_model.go"},
-			common.File{TemplatePath: path.Join(commonDir, "types.go.tmpl"), OutputPath: "user_types.go"},
-			common.File{TemplatePath: path.Join(commonDir, "service.go.tmpl"), OutputPath: "user_service.go"},
-			common.File{TemplatePath: path.Join(fwDir, "handler.go.tmpl"), OutputPath: "user_handler.go"},
-			common.File{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: "routes.go"},
-		)
-	case "layered":
-		files = append(files,
-			common.File{TemplatePath: path.Join(commonDir, "model.go.tmpl"), OutputPath: "internal/models/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "types.go.tmpl"), OutputPath: "internal/types/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "service.go.tmpl"), OutputPath: "internal/service/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "handler.go.tmpl"), OutputPath: "internal/handlers/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: "internal/routes/routes.go"},
-		)
-	case "modular":
-		files = append(files,
-			common.File{TemplatePath: path.Join(commonDir, "model.go.tmpl"), OutputPath: "internal/user/model.go"},
-			common.File{TemplatePath: path.Join(commonDir, "types.go.tmpl"), OutputPath: "internal/user/types.go"},
-			common.File{TemplatePath: path.Join(commonDir, "service.go.tmpl"), OutputPath: "internal/user/service.go"},
-			common.File{TemplatePath: path.Join(fwDir, "handler.go.tmpl"), OutputPath: "internal/user/handler.go"},
-			common.File{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: "internal/routes/routes.go"},
-		)
-	case "hexagonal":
-		files = append(files,
-			common.File{TemplatePath: path.Join(commonDir, "model.go.tmpl"), OutputPath: "internal/domain/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "types.go.tmpl"), OutputPath: "internal/domain/types.go"},
-			common.File{TemplatePath: path.Join(commonDir, "ports_repository.go.tmpl"), OutputPath: "internal/ports/repository.go"},
-			common.File{TemplatePath: path.Join(commonDir, "ports_service.go.tmpl"), OutputPath: "internal/ports/service.go"},
-			common.File{TemplatePath: path.Join(commonDir, "service.go.tmpl"), OutputPath: "internal/application/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "repository.go.tmpl"), OutputPath: "internal/adapters/postgres/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "handler.go.tmpl"), OutputPath: "internal/handlers/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: "internal/routes/routes.go"},
-		)
-	case "clean_arch":
-		files = append(files,
-			common.File{TemplatePath: path.Join(commonDir, "model.go.tmpl"), OutputPath: "internal/domain/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "types.go.tmpl"), OutputPath: "internal/domain/types.go"},
-			common.File{TemplatePath: path.Join(commonDir, "ports_repository.go.tmpl"), OutputPath: "internal/ports/repository.go"},
-			common.File{TemplatePath: path.Join(commonDir, "ports_service.go.tmpl"), OutputPath: "internal/ports/service.go"},
-			common.File{TemplatePath: path.Join(commonDir, "service.go.tmpl"), OutputPath: "internal/application/user.go"},
-			common.File{TemplatePath: path.Join(commonDir, "repository.go.tmpl"), OutputPath: "internal/infrastructure/persistence/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "handler.go.tmpl"), OutputPath: "internal/handlers/user.go"},
-			common.File{TemplatePath: path.Join(fwDir, "routes.go.tmpl"), OutputPath: "internal/routes/routes.go"},
-		)
+	endpoint := manifest.EndpointSpec{Name: sampleName, Register: []string{arch.routes}}
+	for _, file := range arch.sample {
+		templateDir := commonDir
+		if file.framework {
+			templateDir = fwDir
+		}
+		files = append(files, common.File{TemplatePath: path.Join(templateDir, file.template+".tmpl"), OutputPath: file.output})
+		endpoint.Files = append(endpoint.Files, file.output)
 	}
 
 	goModule := "example.com/" + project.Slug(config.ProjectName)
 	data := templateData{
 		BaseData: common.NewBaseData(config),
 		GoModule: goModule,
-		Package:  "user",
+		Package:  sampleName,
 		Class:    "User",
-		VarName:  "user",
+		VarName:  sampleName,
 	}
 
-	return common.Plan{Files: files, Data: data, Endpoints: []string{"user"}}, nil
+	return common.Plan{Files: files, Data: data, Endpoints: []string{sampleName}, Endpoint: endpoint}, nil
 }

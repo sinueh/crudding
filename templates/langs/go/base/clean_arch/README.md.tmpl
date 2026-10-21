@@ -34,10 +34,10 @@ $$\text{Infrastructure (Persistence, HTTP)} \longrightarrow \text{Application (U
 ├── internal/
 │   ├── domain/                  # Entidades centrais de negócio
 │   │   ├── user.go
-│   │   └── types.go
+│   │   └── user_types.go
 │   ├── ports/                   # Contratos e interfaces (Gateways)
-│   │   ├── repository.go
-│   │   └── service.go
+│   │   ├── user_repository.go
+│   │   └── user_service.go
 │   ├── application/             # Casos de uso da aplicação
 │   │   └── user.go
 │   ├── infrastructure/          # Detalhes de infraestrutura

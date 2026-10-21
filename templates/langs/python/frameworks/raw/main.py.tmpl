@@ -2,10 +2,10 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
 
-# crudding:imports
+from {{.Modules.controller}} import handle as handle_{{.Name}}
 
 ROUTES = {
-    # crudding:routes
+    "{{.Route}}": handle_{{.Name}},
 }
 
 

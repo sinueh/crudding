@@ -12,8 +12,7 @@ import (
 {{else if eq .Architecture "clean_arch"}}	"{{.GoModule}}/internal/application"
 	"{{.GoModule}}/internal/handlers"
 	"{{.GoModule}}/internal/infrastructure/persistence"
-{{end}}	// crudding:imports
-)
+{{end}})
 
 func SetupRouter() *http.ServeMux {
 	mux := http.NewServeMux()
@@ -34,7 +33,6 @@ func SetupRouter() *http.ServeMux {
 	mux.HandleFunc("GET /api/v1/users", userHandler.List)
 	mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetByID)
 	mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.Delete)
-	// crudding:routes
 
 	return mux
 }

@@ -44,10 +44,10 @@ A **Hexagonal Architecture** isola as regras fundamentais de negócio do mundo e
 ├── internal/
 │   ├── domain/                  # Núcleo de entidades puras
 │   │   ├── user.go
-│   │   └── types.go
+│   │   └── user_types.go
 │   ├── ports/                   # Contratos (interfaces Go)
-│   │   ├── repository.go        # Driven Port (UserRepository)
-│   │   └── service.go           # Driving Port (UserService)
+│   │   ├── user_repository.go   # Driven Port (UserRepository)
+│   │   └── user_service.go      # Driving Port (UserService)
 │   ├── application/             # Implementação dos serviços da aplicação
 │   │   └── user.go
 │   ├── adapters/                # Adaptadores secundários de infraestrutura

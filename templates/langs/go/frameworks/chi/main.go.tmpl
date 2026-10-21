@@ -5,11 +5,9 @@ import (
 	"net/http"
 {{if not (eq .Architecture "flat")}}
 	"{{.GoModule}}/internal/routes"
-{{end}}	// crudding:imports
-)
+{{end}})
 
 func main() {
-	// crudding:di
 {{if eq .Architecture "flat"}}	router := SetupRouter()
 {{else}}	router := routes.SetupRouter()
 {{end}}

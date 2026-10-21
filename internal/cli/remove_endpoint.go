@@ -19,8 +19,8 @@ import (
 func RemoveEndpointUsage() string {
 	var b strings.Builder
 	b.WriteString("como funciona:\n")
-	b.WriteString("  Remove os arquivos gerados de um endpoint e limpa as linhas inseridas\n")
-	b.WriteString("  nos arquivos de rota, além de atualizar o project.crud.\n\n")
+	b.WriteString("  Desfaz o \"crudding add endpoint\": remove as cópias do endpoint de exemplo e as\n")
+	b.WriteString("  linhas duplicadas nos arquivos de \"register\", além de atualizar o project.crud.\n\n")
 	b.WriteString("uso:\n")
 	b.WriteString("  crudding remove endpoint [<nome> | name:<nome> | n:<nome>]\n\n")
 	b.WriteString("exemplos:\n")

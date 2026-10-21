@@ -26,18 +26,14 @@ type Language struct {
 	Frameworks    []string
 	Architectures []string
 	ORMs          []string
-	plan          func(destination string, config project.Config) (common.Plan, error)
-	// endpoint monta o Patch de "crudding add endpoint"; nil enquanto a
-	// linguagem não suporta o comando.
-	endpoint func(root string, config project.Config, name string) (common.Patch, error)
-	// removePlan monta o RemovalPlan de "crudding remove endpoint"; nil enquanto
-	// a linguagem não suporta o comando.
-	removePlan func(root string, config project.Config, name string) (common.RemovalPlan, error)
+	// plan monta o projeto. Para o "crudding add endpoint" funcionar, ele
+	// preenche Plan.Endpoint com o endpoint de exemplo gerado.
+	plan func(destination string, config project.Config) (common.Plan, error)
 }
 
 var languages = []Language{
-	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, ORMs: python.ORMs, plan: python.Plan, endpoint: python.Endpoint, removePlan: python.RemovePlan},
-	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, ORMs: golang.ORMs, plan: golang.Plan, endpoint: golang.Endpoint, removePlan: golang.RemovePlan},
+	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, ORMs: python.ORMs, plan: python.Plan},
+	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, ORMs: golang.ORMs, plan: golang.Plan},
 	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, ORMs: node.ORMs, plan: node.Plan},
 }
 
