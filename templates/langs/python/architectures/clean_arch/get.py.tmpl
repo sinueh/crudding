@@ -1,0 +1,9 @@
+from {{.Modules.model}} import {{.Class}}
+
+
+class Get{{.Class}}:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def execute(self, item_id: str) -> {{.Class}} | None:
+        return self.repository.find_by_id(item_id)

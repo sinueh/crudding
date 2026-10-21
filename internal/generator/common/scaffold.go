@@ -60,7 +60,8 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 	m.Endpoint = plan.Endpoint
 	if plan.Manifest != nil {
 		m = *plan.Manifest
-	} else if m.Directories, m.Files, err = ListStructure(os.DirFS(root), m.Ignore); err != nil {
+	}
+	if m.Directories, m.Files, err = ListStructure(os.DirFS(root), m.Ignore); err != nil {
 		return err
 	}
 	return manifest.Write(root, m)

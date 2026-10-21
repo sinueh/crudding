@@ -1,0 +1,18 @@
+from {{.Modules.model}} import {{.Class}}
+
+
+class Update{{.Class}}:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def execute(self, item_id: str, data: dict) -> {{.Class}}:
+{{- if .HasORM "sqlalchemy" }}
+        item = self.repository.find_by_id(item_id)
+        if not item:
+            raise ValueError(f"{{.Class}} {item_id} não encontrado")
+        # TODO: aplique as alterações adicionais de data
+        return self.repository.save(item)
+{{- else }}
+        # TODO: carregue o {{.Class}}, aplique as alterações e persista com self.repository.save.
+        raise NotImplementedError
+{{- end }}

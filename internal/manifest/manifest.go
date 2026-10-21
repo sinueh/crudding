@@ -46,6 +46,48 @@ type Manifest struct {
 	Ignore      []string `json:"ignore"`
 	Directories []string `json:"directories"`
 	Files       []string `json:"files"`
+	// FileMappings indica a origem de cada arquivo do template se diferente do destino.
+	FileMappings []FileMapping `json:"-"`
+}
+
+// FileMapping descreve a origem e o destino de um arquivo no template.
+type FileMapping struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+func (m *Manifest) UnmarshalJSON(data []byte) error {
+	type alias Manifest
+	var aux struct {
+		alias
+		RawFiles []json.RawMessage `json:"files"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*m = Manifest(aux.alias)
+	m.Files = make([]string, len(aux.RawFiles))
+	m.FileMappings = make([]FileMapping, len(aux.RawFiles))
+	for i, raw := range aux.RawFiles {
+		var str string
+		if err := json.Unmarshal(raw, &str); err == nil {
+			m.Files[i] = str
+			m.FileMappings[i] = FileMapping{From: str, To: str}
+			continue
+		}
+		var mapping FileMapping
+		if err := json.Unmarshal(raw, &mapping); err == nil && (mapping.From != "" || mapping.To != "") {
+			if mapping.To == "" {
+				mapping.To = mapping.From
+			}
+			m.Files[i] = mapping.To
+			m.FileMappings[i] = mapping
+			continue
+		}
+		return fmt.Errorf("files[%d]: formato inválido", i)
+	}
+	m.normalize()
+	return nil
 }
 
 // EndpointSpec descreve um endpoint de exemplo que já existe no projeto. O
@@ -191,6 +233,11 @@ func parse(content []byte, label string) (Manifest, error) {
 	}
 	m.normalize()
 	return m, nil
+}
+
+// Parse decodifica os bytes do JSON em um Manifest.
+func Parse(content []byte, label string) (Manifest, error) {
+	return parse(content, label)
 }
 
 // normalize troca listas nil por vazias, para o project.crud sempre ter as

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "node",
+  "framework": "{{.Framework}}",
+  "architecture": "hexagonal",
+  "runtime": "{{.Runtime}}",
+  "endpoints": ["product"],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/http",
+    "src/adapters/persistence",
+    "src/domain",
+    "src/entrypoints",
+    "src/ports"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/hexagonal/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/package.json.tmpl",
+      "to": "package.json"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/server.{{.Runtime}}.tmpl",
+      "to": "src/adapters/http/server.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/entrypoints/main.{{.Runtime}}.tmpl",
+      "to": "src/entrypoints/main.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/domain/errors.{{.Runtime}}.tmpl",
+      "to": "src/domain/errors.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/domain/product.{{.Runtime}}.tmpl",
+      "to": "src/domain/product.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/domain/product-manager.{{.Runtime}}.tmpl",
+      "to": "src/domain/product-manager.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/ports/product-repository.{{.Runtime}}.tmpl",
+      "to": "src/ports/product-repository.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/ports/product-service.{{.Runtime}}.tmpl",
+      "to": "src/ports/product-service.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/adapters/http/product-controller.{{.Runtime}}.tmpl",
+      "to": "src/adapters/http/product-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/adapters/http/routes.{{.Runtime}}.tmpl",
+      "to": "src/adapters/http/routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/hexagonal/src/adapters/persistence/in-memory-product-repository.{{.Runtime}}.tmpl",
+      "to": "src/adapters/persistence/in-memory-product-repository.{{.Runtime}}"
+    }{{- if eq .Runtime "ts"}},
+    {
+      "from": "architectures/common/tsconfig.json.tmpl",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "architectures/common/http-types.ts.tmpl",
+      "to": "src/adapters/http/types.ts"
+    }{{- end}}
+  ]
+}

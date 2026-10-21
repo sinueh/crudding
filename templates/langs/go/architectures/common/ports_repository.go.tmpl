@@ -1,0 +1,13 @@
+package ports
+
+import (
+	"{{.GoModule}}/internal/domain"
+)
+
+type {{.Class}}Repository interface {
+	Create({{.VarName}} *domain.{{.Class}}) error
+	FindAll() ([]domain.{{.Class}}, error)
+	FindByID(id uint) (*domain.{{.Class}}, error)
+	Delete(id uint) error
+}
+

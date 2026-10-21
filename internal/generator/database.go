@@ -160,7 +160,7 @@ func buildDatabasePatch(root string, m manifest.Manifest, db string) (common.Pat
 		}
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(configPath))); os.IsNotExist(err) {
 			files = append(files, common.File{
-				TemplatePath: "templates/langs/go/base/common/config.go.tmpl",
+				TemplatePath: "templates/langs/go/architectures/common/config.go.tmpl",
 				OutputPath:   configPath,
 			})
 		} else {
@@ -174,7 +174,7 @@ func buildDatabasePatch(root string, m manifest.Manifest, db string) (common.Pat
 		}
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(configPath))); os.IsNotExist(err) {
 			files = append(files, common.File{
-				TemplatePath: "templates/langs/python/base/common/config.py.tmpl",
+				TemplatePath: "templates/langs/python/architectures/common/config.py.tmpl",
 				OutputPath:   configPath,
 			})
 		} else {

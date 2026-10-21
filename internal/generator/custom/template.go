@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/template"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/manifest"
@@ -26,8 +27,9 @@ type templateFile struct {
 // Plan monta o projeto projectName a partir do template em templates, cujo
 // project.crud é m: cria as directories e copia os files listados, trocando o
 // nome do template pelo do projeto nos caminhos e no conteúdo dos arquivos de
-// texto. Tudo é lido e validado aqui, antes de qualquer gravação.
-func Plan(templates fs.FS, m manifest.Manifest, projectName string) (common.Plan, error) {
+// texto. Se data for fornecido e os arquivos forem templates (.tmpl), eles
+// são renderizados com text/template. Tudo é lido e validado aqui, antes de qualquer gravação.
+func Plan(templates fs.FS, m manifest.Manifest, projectName string, data ...any) (common.Plan, error) {
 	if len(m.Files) == 0 {
 		return common.Plan{}, fmt.Errorf("o %s do template não lista files; rode \"crudding init\" na pasta do template", manifest.FileName)
 	}
@@ -42,10 +44,19 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string) (common.Plan
 		directories[index] = output
 	}
 
-	files := make([]templateFile, len(m.Files))
+	mappings := m.FileMappings
+	if len(mappings) == 0 {
+		mappings = make([]manifest.FileMapping, len(m.Files))
+		for index, source := range m.Files {
+			mappings[index] = manifest.FileMapping{From: source, To: source}
+		}
+	}
+
+	files := make([]templateFile, len(mappings))
 	sources := map[string]string{} // saída -> origem, para achar colisões
-	for index, source := range m.Files {
-		output := strings.TrimSuffix(rename.Replace(source), ".tmpl")
+	for index, mapping := range mappings {
+		source := mapping.From
+		output := strings.TrimSuffix(rename.Replace(mapping.To), ".tmpl")
 		if err := checkPaths(source, output); err != nil {
 			return common.Plan{}, fmt.Errorf("files: %w", err)
 		}
@@ -67,6 +78,17 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string) (common.Plan
 		content, err := fs.ReadFile(templates, source)
 		if err != nil {
 			return common.Plan{}, fmt.Errorf("files: %w", err)
+		}
+		if len(data) > 0 && data[0] != nil && strings.HasSuffix(source, ".tmpl") && !isBinary(content) {
+			tmpl, err := template.New(source).Parse(string(content))
+			if err != nil {
+				return common.Plan{}, fmt.Errorf("interpretar template %s: %w", source, err)
+			}
+			var buf bytes.Buffer
+			if err := tmpl.Execute(&buf, data[0]); err != nil {
+				return common.Plan{}, fmt.Errorf("renderizar template %s: %w", source, err)
+			}
+			content = buf.Bytes()
 		}
 		if !isBinary(content) {
 			content = []byte(rename.Replace(string(content)))

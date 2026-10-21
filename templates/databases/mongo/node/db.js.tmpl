@@ -5,3 +5,4 @@ const client = new MongoClient(uri);
 const db = client.db(process.env.DB_NAME || 'app');
 
 module.exports = { client, db };
+

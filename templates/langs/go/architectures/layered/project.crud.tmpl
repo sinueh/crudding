@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "go",
+  "framework": "{{.Framework}}",
+  "architecture": "layered",
+  "endpoints": ["user"],
+  "endpoint": {
+    "name": "user",
+    "files": [
+      "internal/models/user.go",
+      "internal/types/user.go",
+      "internal/service/user.go",
+      "internal/handlers/user.go"
+    ],
+    "register": [
+      "internal/routes/routes.go"
+    ]
+  },
+  "directories": [
+    "cmd/api",
+    "internal/config",
+    "internal/handlers",
+    "internal/models",
+    "internal/routes",
+    "internal/service",
+    "internal/types"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/layered/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/go.mod.tmpl",
+      "to": "go.mod"
+    },
+    {
+      "from": "architectures/common/go.sum.tmpl",
+      "to": "go.sum"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.go.tmpl",
+      "to": "cmd/api/main.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/routes.go.tmpl",
+      "to": "internal/routes/routes.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/handler.go.tmpl",
+      "to": "internal/handlers/user.go"
+    },
+    {
+      "from": "architectures/common/model.go.tmpl",
+      "to": "internal/models/user.go"
+    },
+    {
+      "from": "architectures/common/types.go.tmpl",
+      "to": "internal/types/user.go"
+    },
+    {
+      "from": "architectures/common/service.go.tmpl",
+      "to": "internal/service/user.go"
+    },
+    {
+      "from": "architectures/common/config.go.tmpl",
+      "to": "internal/config/config.go"
+    }
+  ]
+}

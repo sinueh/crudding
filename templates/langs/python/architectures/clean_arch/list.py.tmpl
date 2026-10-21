@@ -1,0 +1,9 @@
+from {{.Modules.model}} import {{.Class}}
+
+
+class List{{.Class}}:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def execute(self) -> list[{{.Class}}]:
+        return self.repository.find_all()

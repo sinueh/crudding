@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "go",
+  "framework": "{{.Framework}}",
+  "architecture": "hexagonal",
+  "endpoints": ["user"],
+  "endpoint": {
+    "name": "user",
+    "files": [
+      "internal/domain/user.go",
+      "internal/domain/user_types.go",
+      "internal/ports/user_repository.go",
+      "internal/ports/user_service.go",
+      "internal/application/user.go",
+      "internal/adapters/postgres/user.go",
+      "internal/handlers/user.go"
+    ],
+    "register": [
+      "internal/routes/routes.go"
+    ]
+  },
+  "directories": [
+    "cmd/api",
+    "internal/adapters/postgres",
+    "internal/application",
+    "internal/config",
+    "internal/domain",
+    "internal/handlers",
+    "internal/ports",
+    "internal/routes"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/hexagonal/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/go.mod.tmpl",
+      "to": "go.mod"
+    },
+    {
+      "from": "architectures/common/go.sum.tmpl",
+      "to": "go.sum"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.go.tmpl",
+      "to": "cmd/api/main.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/routes.go.tmpl",
+      "to": "internal/routes/routes.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/handler.go.tmpl",
+      "to": "internal/handlers/user.go"
+    },
+    {
+      "from": "architectures/common/model.go.tmpl",
+      "to": "internal/domain/user.go"
+    },
+    {
+      "from": "architectures/common/types.go.tmpl",
+      "to": "internal/domain/user_types.go"
+    },
+    {
+      "from": "architectures/common/ports_repository.go.tmpl",
+      "to": "internal/ports/user_repository.go"
+    },
+    {
+      "from": "architectures/common/ports_service.go.tmpl",
+      "to": "internal/ports/user_service.go"
+    },
+    {
+      "from": "architectures/common/service.go.tmpl",
+      "to": "internal/application/user.go"
+    },
+    {
+      "from": "architectures/common/repository.go.tmpl",
+      "to": "internal/adapters/postgres/user.go"
+    },
+    {
+      "from": "architectures/common/config.go.tmpl",
+      "to": "internal/config/config.go"
+    }
+  ]
+}

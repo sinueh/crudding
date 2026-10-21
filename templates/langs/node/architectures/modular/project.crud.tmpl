@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "node",
+  "framework": "{{.Framework}}",
+  "architecture": "modular",
+  "runtime": "{{.Runtime}}",
+  "endpoints": ["catalog", "orders"],
+  "directories": [
+    "src",
+    "src/modules",
+    "src/modules/catalog",
+    "src/modules/orders",
+    "src/shared",
+    "src/shared/http"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/modular/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/package.json.tmpl",
+      "to": "package.json"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/server.{{.Runtime}}.tmpl",
+      "to": "src/shared/http/server.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/main.{{.Runtime}}.tmpl",
+      "to": "src/main.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/catalog/index.{{.Runtime}}.tmpl",
+      "to": "src/modules/catalog/index.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/catalog/product.{{.Runtime}}.tmpl",
+      "to": "src/modules/catalog/product.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/catalog/catalog-service.{{.Runtime}}.tmpl",
+      "to": "src/modules/catalog/catalog-service.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/catalog/catalog-controller.{{.Runtime}}.tmpl",
+      "to": "src/modules/catalog/catalog-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/catalog/catalog-routes.{{.Runtime}}.tmpl",
+      "to": "src/modules/catalog/catalog-routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/orders/index.{{.Runtime}}.tmpl",
+      "to": "src/modules/orders/index.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/orders/order.{{.Runtime}}.tmpl",
+      "to": "src/modules/orders/order.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/orders/order-service.{{.Runtime}}.tmpl",
+      "to": "src/modules/orders/order-service.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/orders/order-controller.{{.Runtime}}.tmpl",
+      "to": "src/modules/orders/order-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/modules/orders/order-routes.{{.Runtime}}.tmpl",
+      "to": "src/modules/orders/order-routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/shared/database.{{.Runtime}}.tmpl",
+      "to": "src/shared/database.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/shared/errors.{{.Runtime}}.tmpl",
+      "to": "src/shared/errors.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/modular/src/shared/respond.{{.Runtime}}.tmpl",
+      "to": "src/shared/respond.{{.Runtime}}"
+    }{{- if eq .Runtime "ts"}},
+    {
+      "from": "architectures/common/tsconfig.json.tmpl",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "architectures/common/http-types.ts.tmpl",
+      "to": "src/shared/http/types.ts"
+    }{{- end}}
+  ]
+}

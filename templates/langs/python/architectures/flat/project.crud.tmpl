@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "python",
+  "framework": "{{.Framework}}",
+  "architecture": "flat",
+  "endpoints": ["resource"],
+  "endpoint": {
+    "name": "resource",
+    "files": [
+      "src/resource_controller.py",
+      "src/resource_service.py",
+      "src/resource_model.py"
+    ],
+    "register": [
+      "src/main.py"
+    ]
+  },
+  "directories": [
+    "src",
+    "src/config",
+    "tests"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/flat/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "architectures/flat/setup.py.tmpl",
+      "to": "setup.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/requirements.txt.tmpl",
+      "to": "requirements.txt"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/config/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "tests/__init__.py"
+    },
+    {
+      "from": "architectures/common/config.py.tmpl",
+      "to": "src/config/config.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.py.tmpl",
+      "to": "src/main.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": "src/resource_controller.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": "src/resource_model.py"
+    },
+    {
+      "from": "architectures/common/service.py.tmpl",
+      "to": "src/resource_service.py"
+    }
+  ]
+}

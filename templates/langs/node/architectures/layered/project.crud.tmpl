@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "node",
+  "framework": "{{.Framework}}",
+  "architecture": "layered",
+  "runtime": "{{.Runtime}}",
+  "endpoints": ["user", "order"],
+  "directories": [
+    "src",
+    "src/controllers",
+    "src/http",
+    "src/models",
+    "src/routes",
+    "src/services"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/layered/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/package.json.tmpl",
+      "to": "package.json"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/server.{{.Runtime}}.tmpl",
+      "to": "src/http/server.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/main.{{.Runtime}}.tmpl",
+      "to": "src/main.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/routes/index.{{.Runtime}}.tmpl",
+      "to": "src/routes/index.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/routes/user-routes.{{.Runtime}}.tmpl",
+      "to": "src/routes/user-routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/routes/order-routes.{{.Runtime}}.tmpl",
+      "to": "src/routes/order-routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/controllers/respond.{{.Runtime}}.tmpl",
+      "to": "src/controllers/respond.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/controllers/user-controller.{{.Runtime}}.tmpl",
+      "to": "src/controllers/user-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/controllers/order-controller.{{.Runtime}}.tmpl",
+      "to": "src/controllers/order-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/services/user-service.{{.Runtime}}.tmpl",
+      "to": "src/services/user-service.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/services/order-service.{{.Runtime}}.tmpl",
+      "to": "src/services/order-service.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/models/errors.{{.Runtime}}.tmpl",
+      "to": "src/models/errors.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/models/user.{{.Runtime}}.tmpl",
+      "to": "src/models/user.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/layered/src/models/order.{{.Runtime}}.tmpl",
+      "to": "src/models/order.{{.Runtime}}"
+    }{{- if eq .Runtime "ts"}},
+    {
+      "from": "architectures/common/tsconfig.json.tmpl",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "architectures/common/http-types.ts.tmpl",
+      "to": "src/http/types.ts"
+    }{{- end}}
+  ]
+}

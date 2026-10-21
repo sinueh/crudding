@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "python",
+  "framework": "{{.Framework}}",
+  "architecture": "layered",
+  "endpoints": ["resource"],
+  "endpoint": {
+    "name": "resource",
+    "files": [
+      "src/app/controllers/resource_controller.py",
+      "src/app/services/resource_service.py",
+      "src/app/models/resource.py"
+    ],
+    "register": [
+      "src/app/main.py"
+    ]
+  },
+  "directories": [
+    "src",
+    "src/app",
+    "src/app/config",
+    "src/app/controllers",
+    "src/app/models",
+    "src/app/services"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/layered/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/requirements.txt.tmpl",
+      "to": "requirements.txt"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/config/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/controllers/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/models/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/services/__init__.py"
+    },
+    {
+      "from": "architectures/common/config.py.tmpl",
+      "to": "src/app/config/config.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.py.tmpl",
+      "to": "src/app/main.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": "src/app/controllers/resource_controller.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": "src/app/models/resource.py"
+    },
+    {
+      "from": "architectures/common/service.py.tmpl",
+      "to": "src/app/services/resource_service.py"
+    }
+  ]
+}

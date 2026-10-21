@@ -1,0 +1,69 @@
+package {{if eq .Architecture "hexagonal"}}postgres{{else if eq .Architecture "clean_arch"}}persistence{{end}}
+
+import (
+	"errors"
+	"sync"
+
+	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+)
+
+var (
+	Err{{.Class}}NotFound = errors.New("{{.VarName}} não encontrado")
+)
+
+type {{.VarName}}Repository struct {
+	mu     sync.RWMutex
+	items  map[uint]domain.{{.Class}}
+	nextID uint
+}
+
+func New{{.Class}}Repository() ports.{{.Class}}Repository {
+	return &{{.VarName}}Repository{
+		items:  make(map[uint]domain.{{.Class}}),
+		nextID: 1,
+	}
+}
+
+func (r *{{.VarName}}Repository) Create({{.VarName}} *domain.{{.Class}}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	{{.VarName}}.ID = r.nextID
+	r.nextID++
+	r.items[{{.VarName}}.ID] = *{{.VarName}}
+	return nil
+}
+
+func (r *{{.VarName}}Repository) FindAll() ([]domain.{{.Class}}, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	list := make([]domain.{{.Class}}, 0, len(r.items))
+	for _, item := range r.items {
+		list = append(list, item)
+	}
+	return list, nil
+}
+
+func (r *{{.VarName}}Repository) FindByID(id uint) (*domain.{{.Class}}, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	item, exists := r.items[id]
+	if !exists {
+		return nil, Err{{.Class}}NotFound
+	}
+	return &item, nil
+}
+
+func (r *{{.VarName}}Repository) Delete(id uint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.items[id]; !exists {
+		return Err{{.Class}}NotFound
+	}
+	delete(r.items, id)
+	return nil
+}

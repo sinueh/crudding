@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "go",
+  "framework": "{{.Framework}}",
+  "architecture": "flat",
+  "endpoints": ["user"],
+  "endpoint": {
+    "name": "user",
+    "files": [
+      "user_model.go",
+      "user_types.go",
+      "user_service.go",
+      "user_handler.go"
+    ],
+    "register": [
+      "routes.go"
+    ]
+  },
+  "directories": [
+    "config"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/flat/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/go.mod.tmpl",
+      "to": "go.mod"
+    },
+    {
+      "from": "architectures/common/go.sum.tmpl",
+      "to": "go.sum"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.go.tmpl",
+      "to": "main.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/routes.go.tmpl",
+      "to": "routes.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/handler.go.tmpl",
+      "to": "user_handler.go"
+    },
+    {
+      "from": "architectures/common/model.go.tmpl",
+      "to": "user_model.go"
+    },
+    {
+      "from": "architectures/common/types.go.tmpl",
+      "to": "user_types.go"
+    },
+    {
+      "from": "architectures/common/service.go.tmpl",
+      "to": "user_service.go"
+    },
+    {
+      "from": "architectures/common/config.go.tmpl",
+      "to": "config/config.go"
+    }
+  ]
+}

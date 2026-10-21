@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "python",
+  "framework": "{{.Framework}}",
+  "architecture": "hexagonal",
+  "endpoints": ["resource"],
+  "endpoint": {
+    "name": "resource",
+    "files": [
+      "src/app/routers/resource_controller.py",
+      "src/app/application/resource_service.py",
+      "src/app/ports/resource_repository.py",
+      "src/app/infrastructure/resource_repository.py",
+      "src/app/domain/resource.py"
+    ],
+    "register": [
+      "src/app/main.py"
+    ]
+  },
+  "directories": [
+    "src",
+    "src/app",
+    "src/app/application",
+    "src/app/config",
+    "src/app/domain",
+    "src/app/infrastructure",
+    "src/app/ports",
+    "src/app/routers"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/hexagonal/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/requirements.txt.tmpl",
+      "to": "requirements.txt"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/application/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/config/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/domain/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/infrastructure/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/ports/__init__.py"
+    },
+    {
+      "from": "architectures/common/__init__.py.tmpl",
+      "to": "src/app/routers/__init__.py"
+    },
+    {
+      "from": "architectures/common/config.py.tmpl",
+      "to": "src/app/config/config.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/main.py.tmpl",
+      "to": "src/app/main.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": "src/app/routers/resource_controller.py"
+    },
+    {
+      "from": "architectures/hexagonal/service.py.tmpl",
+      "to": "src/app/application/resource_service.py"
+    },
+    {
+      "from": "architectures/common/repository_port.py.tmpl",
+      "to": "src/app/ports/resource_repository.py"
+    },
+    {
+      "from": "architectures/common/repository_adapter.py.tmpl",
+      "to": "src/app/infrastructure/resource_repository.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": "src/app/domain/resource.py"
+    }
+  ]
+}

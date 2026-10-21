@@ -1,0 +1,15 @@
+package main
+
+import (
+	"log"
+{{if not (eq .Architecture "flat")}}
+	"{{.GoModule}}/internal/routes"
+{{end}})
+
+func main() {
+{{if eq .Architecture "flat"}}	router := SetupRouter()
+{{else}}	router := routes.SetupRouter()
+{{end}}
+	log.Println("Servidor HTTP rodando em http://localhost:8080")
+	_ = router.Run(":8080")
+}

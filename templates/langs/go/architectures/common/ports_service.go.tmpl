@@ -1,0 +1,13 @@
+package ports
+
+import (
+	"{{.GoModule}}/internal/domain"
+)
+
+type {{.Class}}Service interface {
+	Create(req domain.Create{{.Class}}Request) (domain.{{.Class}}Response, error)
+	List() ([]domain.{{.Class}}Response, error)
+	GetByID(id uint) (domain.{{.Class}}Response, error)
+	Delete(id uint) error
+}
+

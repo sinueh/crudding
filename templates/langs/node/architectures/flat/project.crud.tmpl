@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "node",
+  "framework": "{{.Framework}}",
+  "architecture": "flat",
+  "runtime": "{{.Runtime}}",
+  "endpoints": ["tasks"],
+  "directories": [
+    "src"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/flat/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/package.json.tmpl",
+      "to": "package.json"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/server.{{.Runtime}}.tmpl",
+      "to": "src/server.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/flat/src/main.{{.Runtime}}.tmpl",
+      "to": "src/main.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/flat/src/tasks.{{.Runtime}}.tmpl",
+      "to": "src/tasks.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/flat/src/tasks.test.{{.Runtime}}.tmpl",
+      "to": "src/tasks.test.{{.Runtime}}"
+    }{{- if eq .Runtime "ts"}},
+    {
+      "from": "architectures/common/tsconfig.json.tmpl",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "architectures/common/http-types.ts.tmpl",
+      "to": "src/types.ts"
+    }{{- end}}
+  ]
+}

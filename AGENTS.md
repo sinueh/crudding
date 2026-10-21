@@ -66,13 +66,12 @@ crudding/
 │   │   │   └── template.go      # Plan de "crudding template": cópia com troca de nome; Unlisted
 │   │   ├── langs/
 │   │   │   ├── golang/
-│   │   │   │   └── generate.go  # Gerador Go; declara o endpoint de exemplo (user) por arquitetura
-│   │   │   ├── node/generate.go   # Gerador específico para projetos Node (JS/TS)
+│   │   │   │   └── generate.go  # Opções Go (frameworks, arquiteturas, ORMs)
+│   │   │   ├── node/generate.go   # Opções Node (runtimes, frameworks, arquiteturas, ORMs)
 │   │   │   └── python/
-│   │   │       ├── generate.go   # Gerador específico para projetos Python
-│   │   │       └── sample.go     # Endpoint de exemplo (resource) por arquitetura: arquivos e campo endpoint
+│   │   │       └── generate.go   # Opções Python (frameworks, arquiteturas, ORMs)
 │   │   ├── database.go          # Dispatcher de "crudding add db"
-│   │   ├── generator.go         # Dispatcher central do gerador
+│   │   ├── generator.go         # Dispatcher central do gerador (motor orientado a manifests)
 │   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint" e "crudding remove endpoint"
 │   ├── manifest/
 │   │   └── manifest.go          # Leitura/escrita do project.crud (JSON) e busca nos diretórios pais
@@ -105,11 +104,13 @@ crudding/
 2. **Validação de Segurança (`internal/project/name.go`)**:
    - Rejeita caracteres inválidos e tentativas de path traversal (`..`, barras, etc.).
    - Garante que diretórios existentes nunca sejam sobrescritos (`internal/generator/common/files.go`).
-3. **Geração dos Arquivos (`internal/generator/` e `internal/generator/langs/`)**:
-   - Define a estrutura de diretórios baseado no layout da arquitetura escolhida.
-   - Em Go e Python, inclui o diretório `config/` com `config.go` ou `config.py` para carregar configurações gerais e clientes de banco.
-   - Se um banco de dados for selecionado na criação, gera a infraestrutura (`docker-compose.yml`, `.env.example`, `migrations/`), ativa os blocos correspondentes no `config.*` via condicionais de template e adiciona as dependências do driver (`go.mod` ou `requirements.txt`).
-   - Processa os templates embutidos utilizando `text/template` e grava no diretório de destino.
+3. **Geração dos Arquivos (`internal/generator/generator.go` e `internal/generator/custom/`)**:
+   - Cada linguagem organiza seus templates sob `templates/langs/<lang>/`:
+     - `frameworks/<fw>/`: arquivos específicos do framework (servidor/rotas/handler e dependências como `go.mod.tmpl`, `requirements.txt.tmpl`, `package.json.tmpl`);
+     - `architectures/common/`: arquivos comuns compartilhados entre arquiteturas e frameworks (modelos, tipos, serviços, portas, `.gitignore`, etc.);
+     - `architectures/<arch>/project.crud.tmpl`: manifesto da arquitetura mapeando origens (`from`) e destinos (`to`), diretórios e endpoint de exemplo.
+   - O gerador renderiza o `project.crud.tmpl` com os dados da stack (`Runtime`, `Framework`, etc.) e usa o mesmo motor (`custom.Plan` + `common.Scaffold`) tanto para novos projetos quanto para templates customizados.
+   - Se um banco de dados for selecionado na criação, o gerador adiciona a infraestrutura via `generator.AddDatabase` após o scaffold base.
    - Em caso de falha no meio do processo, o diretório gerado é limpo automaticamente (`defer os.RemoveAll`).
 
 4. **Manifesto**: `common.Scaffold` grava `project.crud` (JSON, `internal/manifest`) na raiz de todo projeto gerado, por último, com `ignore` vazio e `directories`/`files` listando a estrutura gerada (`common.ListStructure`). Todo `project.crud` tem as mesmas chaves do gerado por `crudding init`: listas vazias são gravadas como `[]` (`Manifest.normalize`).

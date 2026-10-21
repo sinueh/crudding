@@ -1,0 +1,48 @@
+from {{.Modules.model}} import {{.Class}}
+from {{.Modules.port}} import {{.Class}}Repository
+{{- if .HasORM "sqlalchemy" }}
+from sqlalchemy.orm import Session
+{{- end }}
+
+
+class {{.Class}}RepositoryAdapter({{.Class}}Repository):
+    """Adapter de persistência de {{.Class}}."""
+
+{{- if .HasORM "sqlalchemy" }}
+    def __init__(self, db: Session = None):
+        if db is None:
+            from {{.Modules.config}} import SessionLocal
+            self.db = SessionLocal()
+        else:
+            self.db = db
+
+    def save(self, item: {{.Class}}) -> {{.Class}}:
+        self.db.add(item)
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def find_by_id(self, item_id: str) -> {{.Class}} | None:
+        return self.db.query({{.Class}}).filter({{.Class}}.id == item_id).first()
+
+    def find_all(self) -> list[{{.Class}}]:
+        return self.db.query({{.Class}}).all()
+
+    def delete(self, item_id: str) -> None:
+        item = self.find_by_id(item_id)
+        if item:
+            self.db.delete(item)
+            self.db.commit()
+{{- else }}
+    def save(self, item: {{.Class}}) -> {{.Class}}:
+        raise NotImplementedError
+
+    def find_by_id(self, item_id: str) -> {{.Class}} | None:
+        raise NotImplementedError
+
+    def find_all(self) -> list[{{.Class}}]:
+        raise NotImplementedError
+
+    def delete(self, item_id: str) -> None:
+        raise NotImplementedError
+{{- end }}

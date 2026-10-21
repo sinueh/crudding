@@ -1,0 +1,19 @@
+{{- if .HasORM "sqlalchemy" }}
+from sqlalchemy import Column, String
+from {{.Modules.config}} import Base
+
+
+class {{.Class}}(Base):
+    __tablename__ = "{{.Name}}s"
+
+    id = Column(String, primary_key=True, index=True)
+    # TODO: adicione os campos de {{.Class}}.
+{{- else }}
+from dataclasses import dataclass
+
+
+@dataclass
+class {{.Class}}:
+    id: str
+    # TODO: adicione os campos de {{.Class}}.
+{{- end }}

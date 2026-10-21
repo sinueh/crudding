@@ -1,12 +1,15 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/template"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/generator/custom"
@@ -83,12 +86,102 @@ func (l Language) validate(config project.Config) error {
 // TemplatePath devolve o caminho relativo do template correspondente à configuração
 // sob o diretório templates/.
 func TemplatePath(config project.Config) string {
-	parts := []string{"templates", "langs", config.Language}
-	if lang, ok := Lookup(config.Language); ok && len(lang.Runtimes) > 0 {
-		parts = append(parts, config.Runtime)
+	return filepath.ToSlash(filepath.Join("templates", "langs", config.Language, "architectures", config.Architecture, "project.crud.tmpl"))
+}
+
+type TemplateData struct {
+	common.BaseData
+	GoModule     string
+	Package      string
+	Runtime      string
+	EntryScript  string
+	EntryModule  string
+	Name         string
+	Class        string
+	Route        string
+	VarName      string
+	Modules      map[string]string
+	Dependencies []string
+}
+
+func buildTemplateData(config project.Config) TemplateData {
+	data := TemplateData{
+		BaseData: common.NewBaseData(config),
+		Runtime:  config.Runtime,
 	}
-	parts = append(parts, config.Framework, config.Architecture)
-	return filepath.ToSlash(filepath.Join(parts...))
+
+	switch config.Language {
+	case "go":
+		data.GoModule = "example.com/" + project.Slug(config.ProjectName)
+		data.Package = "user"
+		data.VarName = "user"
+		data.Class = "User"
+	case "node":
+		var nodeEntry = map[string]string{
+			"flat":       "src/main",
+			"layered":    "src/main",
+			"modular":    "src/main",
+			"hexagonal":  "src/entrypoints/main",
+			"clean_arch": "src/frameworks/main",
+		}
+		data.EntryScript = nodeEntry[config.Architecture] + "." + config.Runtime
+	case "python":
+		data.Package = strings.ReplaceAll(strings.ToLower(config.ProjectName), "-", "_")
+		data.Name = "resource"
+		data.Class = "Resource"
+		data.Route = "resource"
+		pkgDir := "src/app"
+		if config.Architecture == "flat" {
+			pkgDir = "src"
+		}
+		data.EntryScript = path.Join(pkgDir, "main.py")
+		data.EntryModule = strings.ReplaceAll(strings.TrimSuffix(data.EntryScript, ".py"), "/", ".")
+		data.Modules = pythonModules(pkgDir, config.Architecture)
+	}
+
+	return data
+}
+
+func pythonModules(pkgDir, architecture string) map[string]string {
+	mod := func(file string) string {
+		return strings.ReplaceAll(strings.TrimSuffix(file, ".py"), "/", ".")
+	}
+	m := map[string]string{
+		"config": mod(path.Join(pkgDir, "config", "config.py")),
+	}
+	switch architecture {
+	case "flat":
+		m["controller"] = mod(path.Join(pkgDir, "resource_controller.py"))
+		m["service"] = mod(path.Join(pkgDir, "resource_service.py"))
+		m["model"] = mod(path.Join(pkgDir, "resource_model.py"))
+	case "layered":
+		m["controller"] = mod(path.Join(pkgDir, "controllers", "resource_controller.py"))
+		m["service"] = mod(path.Join(pkgDir, "services", "resource_service.py"))
+		m["model"] = mod(path.Join(pkgDir, "models", "resource.py"))
+	case "modular":
+		m["controller"] = mod(path.Join(pkgDir, "resource", "controller.py"))
+		m["service"] = mod(path.Join(pkgDir, "resource", "service.py"))
+		m["model"] = mod(path.Join(pkgDir, "resource", "models.py"))
+	case "hexagonal":
+		m["controller"] = mod(path.Join(pkgDir, "routers", "resource_controller.py"))
+		m["service"] = mod(path.Join(pkgDir, "application", "resource_service.py"))
+		m["port"] = mod(path.Join(pkgDir, "ports", "resource_repository.py"))
+		m["adapter"] = mod(path.Join(pkgDir, "infrastructure", "resource_repository.py"))
+		m["model"] = mod(path.Join(pkgDir, "domain", "resource.py"))
+	case "clean_arch":
+		m["controller"] = mod(path.Join(pkgDir, "frameworks_and_drivers", "web", "resource_controller.py"))
+		m["service"] = mod(path.Join(pkgDir, "interface_adapters", "controllers", "resource_controller.py"))
+		m["presenter"] = mod(path.Join(pkgDir, "interface_adapters", "presenters", "resource_presenter.py"))
+		m["create"] = mod(path.Join(pkgDir, "application", "use_cases", "create_resource.py"))
+		m["delete"] = mod(path.Join(pkgDir, "application", "use_cases", "delete_resource.py"))
+		m["get"] = mod(path.Join(pkgDir, "application", "use_cases", "get_resource.py"))
+		m["list"] = mod(path.Join(pkgDir, "application", "use_cases", "list_resource.py"))
+		m["update"] = mod(path.Join(pkgDir, "application", "use_cases", "update_resource.py"))
+		m["port"] = mod(path.Join(pkgDir, "application", "port", "outbound", "resource_repository.py"))
+		m["adapter"] = mod(path.Join(pkgDir, "interface_adapters", "persistence", "resource_repository.py"))
+		m["model"] = mod(path.Join(pkgDir, "domain", "model", "resource.py"))
+	}
+	return m
 }
 
 func Generate(destination string, config project.Config, templates fs.FS) error {
@@ -100,25 +193,54 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 		return err
 	}
 
-	tmplRel := TemplatePath(config)
-	templateFS, err := fs.Sub(templates, tmplRel)
+	langFS, err := fs.Sub(templates, path.Join("templates", "langs", config.Language))
 	if err != nil {
-		return fmt.Errorf("acessar template %s: %w", tmplRel, err)
-	}
-	m, err := manifest.ReadFS(templateFS)
-	if err != nil {
-		return fmt.Errorf("ler template %s: %w", tmplRel, err)
+		return fmt.Errorf("acessar templates da linguagem %s: %w", config.Language, err)
 	}
 
-	plan, err := custom.Plan(templateFS, m, config.ProjectName)
+	manifestTmplPath := path.Join("architectures", config.Architecture, "project.crud.tmpl")
+	manifestTmplBytes, err := fs.ReadFile(langFS, manifestTmplPath)
+	if err != nil {
+		return fmt.Errorf("ler template de manifesto %s: %w", manifestTmplPath, err)
+	}
+
+	data := buildTemplateData(config)
+
+	parsedTmpl, err := template.New("manifest").Parse(string(manifestTmplBytes))
+	if err != nil {
+		return fmt.Errorf("interpretar manifesto %s: %w", manifestTmplPath, err)
+	}
+	var renderedManifest bytes.Buffer
+	if err := parsedTmpl.Execute(&renderedManifest, data); err != nil {
+		return fmt.Errorf("renderizar manifesto %s: %w", manifestTmplPath, err)
+	}
+
+	m, err := manifest.Parse(renderedManifest.Bytes(), manifestTmplPath)
+	if err != nil {
+		return fmt.Errorf("decodificar manifesto %s: %w", manifestTmplPath, err)
+	}
+	if len(m.Endpoints) == 0 && m.Endpoint.Name != "" {
+		m.Endpoints = []string{m.Endpoint.Name}
+	}
+	if config.Runtime != "" {
+		m.Runtime = config.Runtime
+	}
+
+	plan, err := custom.Plan(langFS, m, config.ProjectName, data)
 	if err != nil {
 		return fmt.Errorf("montar projeto %s: %w", config.ProjectName, err)
 	}
 	if plan.Manifest != nil {
 		plan.Manifest.Template = ""
 		plan.Manifest.ORM = config.ORM
+		if len(plan.Manifest.Endpoints) == 0 && plan.Manifest.Endpoint.Name != "" {
+			plan.Manifest.Endpoints = []string{plan.Manifest.Endpoint.Name}
+		}
+		if config.Runtime != "" {
+			plan.Manifest.Runtime = config.Runtime
+		}
 	}
-	if err := common.Scaffold(destination, config, templateFS, plan); err != nil {
+	if err := common.Scaffold(destination, config, langFS, plan); err != nil {
 		return err
 	}
 	if config.Database != "" {

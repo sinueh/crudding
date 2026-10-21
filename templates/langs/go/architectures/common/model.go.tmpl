@@ -1,0 +1,11 @@
+package {{if eq .Architecture "modular"}}{{.Package}}{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}domain{{else if eq .Architecture "flat"}}main{{else}}models{{end}}
+
+import "time"
+
+type {{.Class}} struct {
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+{{if eq .Class "User"}}	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+{{end}}	CreatedAt time.Time `json:"createdAt"`
+}

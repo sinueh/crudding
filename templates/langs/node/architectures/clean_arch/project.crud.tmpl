@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "name": "base-app",
+  "language": "node",
+  "framework": "{{.Framework}}",
+  "architecture": "clean_arch",
+  "runtime": "{{.Runtime}}",
+  "endpoints": ["order"],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/controllers",
+    "src/adapters/presenters",
+    "src/adapters/repositories",
+    "src/entities",
+    "src/frameworks",
+    "src/frameworks/http",
+    "src/use-cases",
+    "src/use-cases/ports"
+  ],
+  "files": [
+    {
+      "from": "architectures/common/.gitignore.tmpl",
+      "to": ".gitignore"
+    },
+    {
+      "from": "architectures/clean_arch/README.md.tmpl",
+      "to": "README.md"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/package.json.tmpl",
+      "to": "package.json"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/server.{{.Runtime}}.tmpl",
+      "to": "src/frameworks/http/server.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/frameworks/main.{{.Runtime}}.tmpl",
+      "to": "src/frameworks/main.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/frameworks/http/routes.{{.Runtime}}.tmpl",
+      "to": "src/frameworks/http/routes.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/entities/errors.{{.Runtime}}.tmpl",
+      "to": "src/entities/errors.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/entities/order.{{.Runtime}}.tmpl",
+      "to": "src/entities/order.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/errors.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/errors.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/order-output.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/order-output.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/ports/order-repository.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/ports/order-repository.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/create-order.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/create-order.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/get-order.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/get-order.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/list-orders.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/list-orders.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/use-cases/pay-order.{{.Runtime}}.tmpl",
+      "to": "src/use-cases/pay-order.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/adapters/controllers/order-controller.{{.Runtime}}.tmpl",
+      "to": "src/adapters/controllers/order-controller.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/adapters/presenters/order-presenter.{{.Runtime}}.tmpl",
+      "to": "src/adapters/presenters/order-presenter.{{.Runtime}}"
+    },
+    {
+      "from": "architectures/clean_arch/src/adapters/repositories/in-memory-order-repository.{{.Runtime}}.tmpl",
+      "to": "src/adapters/repositories/in-memory-order-repository.{{.Runtime}}"
+    }{{- if eq .Runtime "ts"}},
+    {
+      "from": "architectures/common/tsconfig.json.tmpl",
+      "to": "tsconfig.json"
+    },
+    {
+      "from": "architectures/common/http-types.ts.tmpl",
+      "to": "src/frameworks/http/types.ts"
+    }{{- end}}
+  ]
+}
