@@ -15,16 +15,32 @@ import (
 	"crudding/internal/project"
 )
 
-// exampleTemplate é o projeto-template documentado no README.
-var exampleTemplate = filepath.Join("..", "..", "examples", "go-template")
-
 func copyExampleTemplate(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "go-template")
-	if err := os.CopyFS(dir, os.DirFS(exampleTemplate)); err != nil {
+	files := map[string]string{
+		".gitignore":                 "bin/\n",
+		"README.md":                  "# go-template\n",
+		"cmd/api/main.go":            "package main\n\nimport (\n\t\"log\"\n\t\"net/http\"\n\n\t\"go-template/internal/health\"\n\t\"go-template/internal/item\"\n)\n\nfunc main() {\n\tmux := http.NewServeMux()\n\thealth.Register(mux)\n\titem.Register(mux)\n\n\tlog.Println(\"go-template ouvindo em http://127.0.0.1:8080\")\n\tlog.Fatal(http.ListenAndServe(\"127.0.0.1:8080\", mux))\n}\n",
+		"go.mod":                     "module go-template\n\ngo 1.27\n",
+		"internal/health/handler.go": "package health\n\nimport \"net/http\"\n\nfunc Register(mux *http.ServeMux) {\n\tmux.HandleFunc(\"GET /health\", func(w http.ResponseWriter, r *http.Request) {\n\t\tw.Write([]byte(\"ok\"))\n\t})\n}\n",
+		"internal/item/handler.go":   "package item\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"sync\"\n)\n\ntype Item struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}\n\nvar (\n\tmu    sync.Mutex\n\titems []Item\n)\n\nfunc Register(mux *http.ServeMux) {\n\tmux.HandleFunc(\"GET /items\", list)\n\tmux.HandleFunc(\"POST /items\", create)\n}\n\nfunc list(w http.ResponseWriter, r *http.Request) {\n\tmu.Lock()\n\tdefer mu.Unlock()\n\twriteJSON(w, http.StatusOK, items)\n}\n\nfunc create(w http.ResponseWriter, r *http.Request) {\n\tvar item Item\n\tif err := json.NewDecoder(r.Body).Decode(&item); err != nil {\n\t\thttp.Error(w, \"invalid body\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tmu.Lock()\n\titem.ID = len(items) + 1\n\titems = append(items, item)\n\tmu.Unlock()\n\twriteJSON(w, http.StatusCreated, item)\n}\n\nfunc writeJSON(w http.ResponseWriter, status int, body any) {\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(status)\n\tjson.NewEncoder(w).Encode(body)\n}\n",
+	}
+	root := newTemplateDir(t, "go-template", files)
+	m, err := custom.Init(root)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return dir
+	m.Language = "go"
+	m.Endpoints = []string{"item"}
+	m.Endpoint = manifest.EndpointSpec{
+		Name:     "item",
+		Files:    []string{"internal/item/handler.go"},
+		Register: []string{"cmd/api/main.go"},
+	}
+	if err := manifest.Write(root, m); err != nil {
+		t.Fatal(err)
+	}
+	return root
 }
 
 func TestTemplateFromGoExample(t *testing.T) {

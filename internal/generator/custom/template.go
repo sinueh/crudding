@@ -45,7 +45,7 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string) (common.Plan
 	files := make([]templateFile, len(m.Files))
 	sources := map[string]string{} // saída -> origem, para achar colisões
 	for index, source := range m.Files {
-		output := rename.Replace(source)
+		output := strings.TrimSuffix(rename.Replace(source), ".tmpl")
 		if err := checkPaths(source, output); err != nil {
 			return common.Plan{}, fmt.Errorf("files: %w", err)
 		}
@@ -84,8 +84,8 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string) (common.Plan
 		generated.Files[index] = file.output
 	}
 	// Caminhos do campo endpoint podem conter o nome do projeto (ex.: src/<pacote>).
-	generated.Endpoint.Files = renameAll(rename, m.Endpoint.Files)
-	generated.Endpoint.Register = renameAll(rename, m.Endpoint.Register)
+	generated.Endpoint.Files = stripTmplAll(renameAll(rename, m.Endpoint.Files))
+	generated.Endpoint.Register = stripTmplAll(renameAll(rename, m.Endpoint.Register))
 
 	return common.Plan{
 		Manifest: &generated,
@@ -115,6 +115,14 @@ func renameAll(rename nameReplacer, paths []string) []string {
 		renamed[index] = rename.Replace(rel)
 	}
 	return renamed
+}
+
+func stripTmplAll(paths []string) []string {
+	result := make([]string, len(paths))
+	for index, p := range paths {
+		result[index] = strings.TrimSuffix(p, ".tmpl")
+	}
+	return result
 }
 
 // Unlisted devolve os arquivos do template que não estão em files nem casam

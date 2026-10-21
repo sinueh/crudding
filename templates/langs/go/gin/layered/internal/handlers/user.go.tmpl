@@ -1,0 +1,77 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+
+	"example.com/go-gin-layered/internal/service"
+	"example.com/go-gin-layered/internal/types"
+	"github.com/gin-gonic/gin"
+)
+
+type UserHandler struct {
+	svc service.UserService
+}
+
+func NewUserHandler(svc service.UserService) *UserHandler {
+	return &UserHandler{svc: svc}
+}
+
+func (h *UserHandler) Create(c *gin.Context) {
+	var req types.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	res, err := h.svc.Create(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao criar user"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, res)
+}
+
+func (h *UserHandler) List(c *gin.Context) {
+	res, err := h.svc.List()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao listar users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *UserHandler) GetByID(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+
+	res, err := h.svc.GetByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user não encontrado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *UserHandler) Delete(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+
+	if err := h.svc.Delete(uint(id)); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user não encontrado"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}

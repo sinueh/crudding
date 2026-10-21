@@ -1,0 +1,70 @@
+package application
+
+import (
+	"time"
+
+	"example.com/go-chi-clean-arch/internal/domain"
+	"example.com/go-chi-clean-arch/internal/ports"
+)
+
+type userService struct {
+	repo ports.UserRepository
+}
+
+func NewUserService(repo ports.UserRepository) ports.UserService {
+	return &userService{repo: repo}
+}
+
+func (s *userService) Create(req domain.CreateUserRequest) (domain.UserResponse, error) {
+	item := domain.User{
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  req.Password,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	if err := s.repo.Create(&item); err != nil {
+		return domain.UserResponse{}, err
+	}
+
+	return domain.UserResponse{
+		ID:    item.ID,
+		Name:  item.Name,
+		Email: item.Email,
+	}, nil
+}
+
+func (s *userService) List() ([]domain.UserResponse, error) {
+	items, err := s.repo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]domain.UserResponse, 0, len(items))
+	for _, item := range items {
+		res = append(res, domain.UserResponse{
+			ID:    item.ID,
+			Name:  item.Name,
+			Email: item.Email,
+		})
+	}
+	return res, nil
+}
+
+func (s *userService) GetByID(id uint) (domain.UserResponse, error) {
+	item, err := s.repo.FindByID(id)
+	if err != nil {
+		return domain.UserResponse{}, err
+	}
+
+	return domain.UserResponse{
+		ID:    item.ID,
+		Name:  item.Name,
+		Email: item.Email,
+	}, nil
+}
+
+func (s *userService) Delete(id uint) error {
+	return s.repo.Delete(id)
+}
+

@@ -79,6 +79,7 @@ func AddDatabase(root string, m manifest.Manifest, db string, templates fs.FS) (
 func buildDatabasePatch(root string, m manifest.Manifest, db string) (common.Patch, error) {
 	var files []common.File
 	var inserts []common.Insert
+	var rewrites []common.Rewrite
 
 	// 1. docker-compose.yml
 	dockerComposePath := filepath.Join(root, "docker-compose.yml")
@@ -177,8 +178,24 @@ func buildDatabasePatch(root string, m manifest.Manifest, db string) (common.Pat
 				OutputPath:   configPath,
 			})
 		} else {
-			pyInserts := pythonDatabaseInserts(configPath, db)
+			pyInserts := pythonDatabaseInserts(configPath, db, m.ORM)
 			inserts = append(inserts, pyInserts...)
+		}
+		if m.ORM == "sqlalchemy" {
+			modelPath := pythonModelPath(m.Architecture)
+			if modelPath != "" {
+				rewrites = append(rewrites, common.Rewrite{
+					Path: modelPath,
+					Edit: func([]byte) ([]byte, error) {
+						cfgImport := "from app.config.config import Base"
+						if m.Architecture == "flat" {
+							cfgImport = "from config.config import Base"
+						}
+						newModel := fmt.Sprintf("from sqlalchemy import Column, String\n%s\n\n\nclass Resource(Base):\n    __tablename__ = \"resources\"\n\n    id = Column(String, primary_key=True, index=True)\n    # TODO: adicione os campos de Resource.\n", cfgImport)
+						return []byte(newModel), nil
+					},
+				})
+			}
 		}
 	case "node":
 		ext := ".js"
@@ -202,9 +219,10 @@ func buildDatabasePatch(root string, m manifest.Manifest, db string) (common.Pat
 	}
 
 	return common.Patch{
-		Files:   files,
-		Inserts: inserts,
-		Data:    data,
+		Files:    files,
+		Inserts:  inserts,
+		Rewrites: rewrites,
+		Data:     data,
 	}, nil
 }
 
@@ -359,10 +377,115 @@ func goDatabaseInserts(configPath, db string) []common.Insert {
 	}
 }
 
-func pythonDatabaseInserts(configPath, db string) []common.Insert {
+func pythonModelPath(arch string) string {
+	switch arch {
+	case "flat":
+		return "src/resource_model.py"
+	case "layered":
+		return "src/app/models/resource.py"
+	case "modular":
+		return "src/app/resource/models.py"
+	case "hexagonal":
+		return "src/app/domain/resource.py"
+	case "clean_arch":
+		return "src/app/domain/model/resource.py"
+	}
+	return ""
+}
+
+func pythonDatabaseInserts(configPath, db, orm string) []common.Insert {
 	var imports []string
 	var configLines []string
 	var methods []string
+
+	if orm == "sqlalchemy" {
+		imports = []string{
+			"from sqlalchemy import create_engine",
+			"from sqlalchemy.orm import declarative_base, sessionmaker",
+		}
+		switch db {
+		case "postgres":
+			configLines = []string{
+				"    DATABASE_URL: str = os.getenv(",
+				"        \"DATABASE_URL\",",
+				"        f\"postgresql://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@\"",
+				"        f\"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'app')}\",",
+				"    )",
+			}
+			methods = []string{
+				"",
+				"Base = declarative_base()",
+				"",
+				"def get_sqlalchemy_engine():",
+				"    \"\"\"Retorna a engine do SQLAlchemy para PostgreSQL.\"\"\"",
+				"    database_url = os.getenv(\"DATABASE_URL\")",
+				"    if not database_url:",
+				"        database_url = (",
+				"            f\"postgresql+psycopg2://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@\"",
+				"            f\"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'app')}\"",
+				"        )",
+				"    return create_engine(database_url)",
+				"",
+				"engine = get_sqlalchemy_engine()",
+				"SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)",
+				"",
+				"def get_db():",
+				"    \"\"\"Generator de sessão do SQLAlchemy.\"\"\"",
+				"    db = SessionLocal()",
+				"    try:",
+				"        yield db",
+				"    finally:",
+				"        db.close()",
+				"",
+				"def init_db():",
+				"    \"\"\"Cria as tabelas no banco de dados se não existirem.\"\"\"",
+				"    Base.metadata.create_all(bind=engine)",
+			}
+		case "mysql":
+			configLines = []string{
+				"    MYSQL_HOST: str = os.getenv(\"DB_HOST\", \"localhost\")",
+				"    MYSQL_PORT: int = int(os.getenv(\"DB_PORT\", \"3306\"))",
+				"    MYSQL_USER: str = os.getenv(\"DB_USER\", \"user\")",
+				"    MYSQL_PASSWORD: str = os.getenv(\"DB_PASSWORD\", \"password\")",
+				"    MYSQL_DB: str = os.getenv(\"DB_NAME\", \"app\")",
+			}
+			methods = []string{
+				"",
+				"Base = declarative_base()",
+				"",
+				"def get_sqlalchemy_engine():",
+				"    \"\"\"Retorna a engine do SQLAlchemy para MySQL.\"\"\"",
+				"    database_url = os.getenv(\"DATABASE_URL\")",
+				"    if not database_url:",
+				"        database_url = (",
+				"            f\"mysql+pymysql://{config.MYSQL_USER}:{config.MYSQL_PASSWORD}@\"",
+				"            f\"{config.MYSQL_HOST}:{config.MYSQL_PORT}/{config.MYSQL_DB}\"",
+				"        )",
+				"    return create_engine(database_url)",
+				"",
+				"engine = get_sqlalchemy_engine()",
+				"SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)",
+				"",
+				"def get_db():",
+				"    \"\"\"Generator de sessão do SQLAlchemy.\"\"\"",
+				"    db = SessionLocal()",
+				"    try:",
+				"        yield db",
+				"    finally:",
+				"        db.close()",
+				"",
+				"def init_db():",
+				"    \"\"\"Cria as tabelas no banco de dados se não existirem.\"\"\"",
+				"    Base.metadata.create_all(bind=engine)",
+			}
+		}
+
+		return []common.Insert{
+			{Path: configPath, Marker: "# crudding:db-imports", Lines: imports},
+			{Path: configPath, Marker: "# crudding:db-config", Lines: configLines},
+			{Path: configPath, Marker: "# crudding:db-methods", Lines: methods},
+		}
+	}
 
 	switch db {
 	case "postgres":

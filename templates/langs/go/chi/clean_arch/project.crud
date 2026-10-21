@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "name": "go-chi-clean_arch",
+  "language": "go",
+  "framework": "chi",
+  "architecture": "clean_arch",
+  "endpoints": [
+    "user"
+  ],
+  "endpoint": {
+    "name": "user",
+    "files": [
+      "internal/domain/user.go.tmpl",
+      "internal/domain/user_types.go.tmpl",
+      "internal/ports/user_repository.go.tmpl",
+      "internal/ports/user_service.go.tmpl",
+      "internal/application/user.go.tmpl",
+      "internal/infrastructure/persistence/user.go.tmpl",
+      "internal/handlers/user.go.tmpl"
+    ],
+    "register": [
+      "internal/routes/routes.go.tmpl"
+    ]
+  },
+  "ignore": [],
+  "directories": [
+    "cmd",
+    "cmd/api",
+    "internal",
+    "internal/application",
+    "internal/config",
+    "internal/domain",
+    "internal/handlers",
+    "internal/infrastructure",
+    "internal/infrastructure/persistence",
+    "internal/ports",
+    "internal/routes"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "cmd/api/main.go.tmpl",
+    "go.mod.tmpl",
+    "go.sum",
+    "internal/application/user.go.tmpl",
+    "internal/config/config.go.tmpl",
+    "internal/domain/user.go.tmpl",
+    "internal/domain/user_types.go.tmpl",
+    "internal/handlers/user.go.tmpl",
+    "internal/infrastructure/persistence/user.go.tmpl",
+    "internal/ports/user_repository.go.tmpl",
+    "internal/ports/user_service.go.tmpl",
+    "internal/routes/routes.go.tmpl"
+  ]
+}

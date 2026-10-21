@@ -1,0 +1,30 @@
+package config
+
+import (
+	"os"
+	// crudding:db-imports
+)
+
+type Config struct {
+	Port string
+	Env  string
+	// crudding:db-struct
+}
+
+func Load() *Config {
+	return &Config{
+		Port: getEnv("PORT", "8080"),
+		Env:  getEnv("APP_ENV", "development"),
+		// crudding:db-load
+	}
+}
+
+// crudding:db-methods
+
+func getEnv(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
+}
+

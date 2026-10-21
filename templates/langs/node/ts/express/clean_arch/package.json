@@ -1,0 +1,23 @@
+{
+  "name": "node-ts-express-clean-arch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "tsx src/frameworks/main.ts",
+    "dev": "tsx watch src/frameworks/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "@types/express": "^5.0.6"
+  }
+}

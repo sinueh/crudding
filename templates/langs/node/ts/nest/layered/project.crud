@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "name": "node-ts-nest-layered",
+  "language": "node",
+  "runtime": "ts",
+  "framework": "nest",
+  "architecture": "layered",
+  "endpoints": [
+    "user",
+    "order"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/controllers",
+    "src/http",
+    "src/models",
+    "src/routes",
+    "src/services"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/controllers/order-controller.ts",
+    "src/controllers/respond.ts",
+    "src/controllers/user-controller.ts",
+    "src/http/server.ts",
+    "src/http/types.ts",
+    "src/main.ts",
+    "src/models/errors.ts",
+    "src/models/order.ts",
+    "src/models/user.ts",
+    "src/routes/index.ts",
+    "src/routes/order-routes.ts",
+    "src/routes/user-routes.ts",
+    "src/services/order-service.ts",
+    "src/services/user-service.ts",
+    "tsconfig.json"
+  ]
+}

@@ -26,15 +26,12 @@ type Language struct {
 	Frameworks    []string
 	Architectures []string
 	ORMs          []string
-	// plan monta o projeto. Para o "crudding add endpoint" funcionar, ele
-	// preenche Plan.Endpoint com o endpoint de exemplo gerado.
-	plan func(destination string, config project.Config) (common.Plan, error)
 }
 
 var languages = []Language{
-	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, ORMs: python.ORMs, plan: python.Plan},
-	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, ORMs: golang.ORMs, plan: golang.Plan},
-	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, ORMs: node.ORMs, plan: node.Plan},
+	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, ORMs: python.ORMs},
+	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, ORMs: golang.ORMs},
+	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, ORMs: node.ORMs},
 }
 
 // Languages devolve as linguagens suportadas, na ordem de exibição do menu.
@@ -83,6 +80,17 @@ func (l Language) validate(config project.Config) error {
 	return nil
 }
 
+// TemplatePath devolve o caminho relativo do template correspondente à configuração
+// sob o diretório templates/.
+func TemplatePath(config project.Config) string {
+	parts := []string{"templates", "langs", config.Language}
+	if lang, ok := Lookup(config.Language); ok && len(lang.Runtimes) > 0 {
+		parts = append(parts, config.Runtime)
+	}
+	parts = append(parts, config.Framework, config.Architecture)
+	return filepath.ToSlash(filepath.Join(parts...))
+}
+
 func Generate(destination string, config project.Config, templates fs.FS) error {
 	language, ok := Lookup(config.Language)
 	if !ok {
@@ -91,11 +99,39 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 	if err := language.validate(config); err != nil {
 		return err
 	}
-	plan, err := language.plan(destination, config)
+
+	tmplRel := TemplatePath(config)
+	templateFS, err := fs.Sub(templates, tmplRel)
 	if err != nil {
+		return fmt.Errorf("acessar template %s: %w", tmplRel, err)
+	}
+	m, err := manifest.ReadFS(templateFS)
+	if err != nil {
+		return fmt.Errorf("ler template %s: %w", tmplRel, err)
+	}
+
+	plan, err := custom.Plan(templateFS, m, config.ProjectName)
+	if err != nil {
+		return fmt.Errorf("montar projeto %s: %w", config.ProjectName, err)
+	}
+	if plan.Manifest != nil {
+		plan.Manifest.Template = ""
+		plan.Manifest.ORM = config.ORM
+	}
+	if err := common.Scaffold(destination, config, templateFS, plan); err != nil {
 		return err
 	}
-	return common.Scaffold(destination, config, templates, plan)
+	if config.Database != "" {
+		currentManifest, err := manifest.Read(filepath.Join(destination, manifest.FileName))
+		if err != nil {
+			return err
+		}
+		currentManifest.ORM = config.ORM
+		if _, err := AddDatabase(destination, currentManifest, config.Database, templates); err != nil {
+			return fmt.Errorf("adicionar banco de dados %s: %w", config.Database, err)
+		}
+	}
+	return nil
 }
 
 // GenerateFromTemplate gera em destination o projeto projectName copiando a

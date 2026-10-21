@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "name": "node-js-nest-hexagonal",
+  "language": "node",
+  "runtime": "js",
+  "framework": "nest",
+  "architecture": "hexagonal",
+  "endpoints": [
+    "product"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/http",
+    "src/adapters/persistence",
+    "src/domain",
+    "src/entrypoints",
+    "src/ports"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/adapters/http/product-controller.js",
+    "src/adapters/http/routes.js",
+    "src/adapters/http/server.js",
+    "src/adapters/persistence/in-memory-product-repository.js",
+    "src/domain/errors.js",
+    "src/domain/product-manager.js",
+    "src/domain/product.js",
+    "src/entrypoints/main.js",
+    "src/ports/product-repository.js",
+    "src/ports/product-service.js"
+  ]
+}

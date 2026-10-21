@@ -1,0 +1,23 @@
+package routes
+
+import (
+	"net/http"
+
+	"example.com/go-raw-hexagonal/internal/adapters/postgres"
+	"example.com/go-raw-hexagonal/internal/application"
+	"example.com/go-raw-hexagonal/internal/handlers"
+)
+
+func SetupRouter() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	userRepo := postgres.NewUserRepository()
+	userSvc := application.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userSvc)
+	mux.HandleFunc("POST /api/v1/users", userHandler.Create)
+	mux.HandleFunc("GET /api/v1/users", userHandler.List)
+	mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetByID)
+	mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.Delete)
+
+	return mux
+}

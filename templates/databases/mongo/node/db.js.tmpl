@@ -1,0 +1,7 @@
+const { MongoClient } = require('mongodb');
+
+const uri = process.env.MONGODB_URI || 'mongodb://root:rootpassword@localhost:27017/app?authSource=admin';
+const client = new MongoClient(uri);
+const db = client.db(process.env.DB_NAME || 'app');
+
+module.exports = { client, db };

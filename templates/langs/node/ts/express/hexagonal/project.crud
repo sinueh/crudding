@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "name": "node-ts-express-hexagonal",
+  "language": "node",
+  "runtime": "ts",
+  "framework": "express",
+  "architecture": "hexagonal",
+  "endpoints": [
+    "product"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/http",
+    "src/adapters/persistence",
+    "src/domain",
+    "src/entrypoints",
+    "src/ports"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/adapters/http/product-controller.ts",
+    "src/adapters/http/routes.ts",
+    "src/adapters/http/server.ts",
+    "src/adapters/http/types.ts",
+    "src/adapters/persistence/in-memory-product-repository.ts",
+    "src/domain/errors.ts",
+    "src/domain/product-manager.ts",
+    "src/domain/product.ts",
+    "src/entrypoints/main.ts",
+    "src/ports/product-repository.ts",
+    "src/ports/product-service.ts",
+    "tsconfig.json"
+  ]
+}

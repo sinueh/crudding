@@ -1,0 +1,35 @@
+import src.app.services.resource_service as service
+
+
+def handle(handler, method: str, parts: list[str]):
+    try:
+        if not parts:
+            if method == "GET":
+                handler.send_json(200, service.list_all())
+                return
+            if method == "POST":
+                payload = handler.read_json()
+                handler.send_json(201, service.create(payload))
+                return
+        elif len(parts) == 1:
+            item_id = parts[0]
+            if method == "GET":
+                item = service.get(item_id)
+                if item is None:
+                    handler.send_json(404, {"detail": f"Resource {item_id} not found"})
+                    return
+                handler.send_json(200, item)
+                return
+            if method == "PATCH":
+                payload = handler.read_json()
+                handler.send_json(200, service.update(item_id, payload))
+                return
+            if method == "DELETE":
+                service.delete(item_id)
+                handler.send_response(204)
+                handler.end_headers()
+                return
+        handler.send_json(404, {"detail": "not found"})
+    except NotImplementedError:
+        handler.send_json(501, {"detail": "Resource: not implemented"})
+

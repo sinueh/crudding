@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "node-js-fastify-flat",
+  "language": "node",
+  "runtime": "js",
+  "framework": "fastify",
+  "architecture": "flat",
+  "endpoints": [
+    "tasks"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/main.js",
+    "src/server.js",
+    "src/tasks.js",
+    "src/tasks.test.js"
+  ]
+}

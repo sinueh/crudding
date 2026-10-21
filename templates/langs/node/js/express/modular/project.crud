@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "name": "node-js-express-modular",
+  "language": "node",
+  "runtime": "js",
+  "framework": "express",
+  "architecture": "modular",
+  "endpoints": [
+    "catalog",
+    "orders"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/modules",
+    "src/modules/catalog",
+    "src/modules/orders",
+    "src/shared",
+    "src/shared/http"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/main.js",
+    "src/modules/catalog/catalog-controller.js",
+    "src/modules/catalog/catalog-routes.js",
+    "src/modules/catalog/catalog-service.js",
+    "src/modules/catalog/index.js",
+    "src/modules/catalog/product.js",
+    "src/modules/orders/index.js",
+    "src/modules/orders/order-controller.js",
+    "src/modules/orders/order-routes.js",
+    "src/modules/orders/order-service.js",
+    "src/modules/orders/order.js",
+    "src/shared/database.js",
+    "src/shared/errors.js",
+    "src/shared/http/server.js",
+    "src/shared/respond.js"
+  ]
+}

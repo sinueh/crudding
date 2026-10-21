@@ -1,0 +1,19 @@
+package main
+
+import (
+	"github.com/gofiber/fiber/v2"
+)
+
+func SetupRouter() *fiber.App {
+	app := fiber.New()
+
+	api := app.Group("/api/v1")
+	userSvc := NewUserService()
+	userHandler := NewUserHandler(userSvc)
+	api.Post("/users", userHandler.Create)
+	api.Get("/users", userHandler.List)
+	api.Get("/users/:id", userHandler.GetByID)
+	api.Delete("/users/:id", userHandler.Delete)
+
+	return app
+}

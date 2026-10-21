@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "name": "node-js-raw-layered",
+  "language": "node",
+  "runtime": "js",
+  "framework": "raw",
+  "architecture": "layered",
+  "endpoints": [
+    "user",
+    "order"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/controllers",
+    "src/http",
+    "src/models",
+    "src/routes",
+    "src/services"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/controllers/order-controller.js",
+    "src/controllers/respond.js",
+    "src/controllers/user-controller.js",
+    "src/http/server.js",
+    "src/main.js",
+    "src/models/errors.js",
+    "src/models/order.js",
+    "src/models/user.js",
+    "src/routes/index.js",
+    "src/routes/order-routes.js",
+    "src/routes/user-routes.js",
+    "src/services/order-service.js",
+    "src/services/user-service.js"
+  ]
+}

@@ -1,0 +1,23 @@
+package routes
+
+import (
+	"example.com/go-fiber-hexagonal/internal/adapters/postgres"
+	"example.com/go-fiber-hexagonal/internal/application"
+	"example.com/go-fiber-hexagonal/internal/handlers"
+	"github.com/gofiber/fiber/v2"
+)
+
+func SetupRouter() *fiber.App {
+	app := fiber.New()
+
+	api := app.Group("/api/v1")
+	userRepo := postgres.NewUserRepository()
+	userSvc := application.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userSvc)
+	api.Post("/users", userHandler.Create)
+	api.Get("/users", userHandler.List)
+	api.Get("/users/:id", userHandler.GetByID)
+	api.Delete("/users/:id", userHandler.Delete)
+
+	return app
+}

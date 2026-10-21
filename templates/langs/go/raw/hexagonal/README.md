@@ -1,0 +1,90 @@
+# go-raw-hexagonal (Hexagonal Architecture / Ports & Adapters)
+
+Projeto Go estruturado utilizando a **Hexagonal Architecture** (Portas e Adaptadores), proposta por Alistair Cockburn.
+
+---
+
+## 🏛️ O que é a Hexagonal Architecture?
+
+A **Hexagonal Architecture** isola as regras fundamentais de negócio do mundo exterior (bancos de dados, frameworks web, protocolos de rede) através de **Portas** e **Adaptadores**:
+
+```text
+       [ Driving Adapter: HTTP/Handlers ] ───► ( Driving Port: UserService )
+                                                           │
+                                                           ▼
+                                                   [ DOMAIN (Core) ]
+                                                           │
+                                                           ▼
+       [ Driven Adapter: Postgres ]       ◄─── ( Driven Port: UserRepository )
+```
+
+### Princípios Chave:
+1. **Domínio Puro (`internal/domain`)**:
+   - Contém as entidades e modelos de dados do sistema, sem acoplamento com infraestrutura.
+2. **Portas (`internal/ports`)**:
+   - **Driving Ports (Primárias)**: Contratos que definem as operações expostas pela aplicação (ex: `UserService`).
+   - **Driven Ports (Secundárias)**: Contratos que definem as necessidades de infraestrutura da aplicação (ex: `UserRepository`).
+3. **Aplicação (`internal/application`)**:
+   - Implementa a Driving Port orquestrando a lógica com o repositório.
+4. **Adaptadores (`internal/adapters` e `internal/handlers`)**:
+   - **Primários / Driving**: Controladores HTTP adaptados para o framework (raw).
+   - **Secundários / Driven**: Implementações de persistência (ex: `adapters/postgres`).
+5. **Entrypoint Centralizado (`cmd/api/main.go`)**:
+   - Inicializa os adaptadores e configura as rotas em `internal/routes/routes.go`.
+
+---
+
+## 📁 Estrutura de Diretórios
+
+```text
+go-raw-hexagonal/
+├── cmd/
+│   └── api/
+│       └── main.go              # Ponto de entrada (raw)
+├── internal/
+│   ├── domain/                  # Núcleo de entidades puras
+│   │   ├── user.go
+│   │   └── user_types.go
+│   ├── ports/                   # Contratos (interfaces Go)
+│   │   ├── user_repository.go   # Driven Port (UserRepository)
+│   │   └── user_service.go      # Driving Port (UserService)
+│   ├── application/             # Implementação dos serviços da aplicação
+│   │   └── user.go
+│   ├── adapters/                # Adaptadores secundários de infraestrutura
+│   │   └── postgres/
+│   │       └── user.go          # Implementação de persistência
+│   ├── handlers/                # Adaptador primário HTTP (Driving)
+│   │   └── user.go
+│   └── routes/                  # Centraliza todas as rotas da aplicação
+│       └── routes.go
+├── go.mod                       # Módulo Go
+├── go.sum                       # Checksums de dependências
+├── .gitignore                   # Arquivos ignorados pelo Git
+└── README.md                    # Documentação da arquitetura
+```
+
+---
+
+## API REST
+
+- `POST /api/v1/users` - Cadastra um novo usuário
+- `GET /api/v1/users` - Lista todos os usuários
+- `GET /api/v1/users/{id}` - Obtém um usuário por ID
+- `DELETE /api/v1/users/{id}` - Remove um usuário
+
+## 🚀 Como Executar
+
+### 1. Baixar dependências
+```sh
+go mod tidy
+```
+
+### 2. Executar o servidor
+```sh
+go run ./cmd/api
+```
+
+### 3. Executar os testes
+```sh
+go test -v ./...
+```

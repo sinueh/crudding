@@ -1,0 +1,13 @@
+package ports
+
+import (
+	"example.com/go-chi-hexagonal/internal/domain"
+)
+
+type UserService interface {
+	Create(req domain.CreateUserRequest) (domain.UserResponse, error)
+	List() ([]domain.UserResponse, error)
+	GetByID(id uint) (domain.UserResponse, error)
+	Delete(id uint) error
+}
+

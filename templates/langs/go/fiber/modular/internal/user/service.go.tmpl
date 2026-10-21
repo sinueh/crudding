@@ -1,0 +1,96 @@
+package user
+
+import (
+	"errors"
+	"sync"
+	"time"
+
+)
+
+var (
+	ErrNotFound = errors.New("user não encontrado")
+)
+
+type Service interface {
+	Create(req CreateUserRequest) (UserResponse, error)
+	List() ([]UserResponse, error)
+	GetByID(id uint) (UserResponse, error)
+	Delete(id uint) error
+}
+
+type userService struct {
+	mu     sync.RWMutex
+	items  map[uint]User
+	nextID uint
+}
+
+func NewService() Service {
+	return &userService{
+		items:  make(map[uint]User),
+		nextID: 1,
+	}
+}
+
+func (s *userService) Create(req CreateUserRequest) (UserResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	item := User{
+		ID:        s.nextID,
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  req.Password,
+		CreatedAt: time.Now().UTC(),
+	}
+	s.nextID++
+	s.items[item.ID] = item
+
+	return UserResponse{
+		ID:    item.ID,
+		Name:  item.Name,
+		Email: item.Email,
+	}, nil
+}
+
+func (s *userService) List() ([]UserResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	res := make([]UserResponse, 0, len(s.items))
+	for _, item := range s.items {
+		res = append(res, UserResponse{
+			ID:    item.ID,
+			Name:  item.Name,
+			Email: item.Email,
+		})
+	}
+	return res, nil
+}
+
+func (s *userService) GetByID(id uint) (UserResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	item, exists := s.items[id]
+	if !exists {
+		return UserResponse{}, ErrNotFound
+	}
+
+	return UserResponse{
+		ID:    item.ID,
+		Name:  item.Name,
+		Email: item.Email,
+	}, nil
+}
+
+func (s *userService) Delete(id uint) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.items[id]; !exists {
+		return ErrNotFound
+	}
+	delete(s.items, id)
+	return nil
+}
+

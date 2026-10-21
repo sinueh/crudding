@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "name": "python-fastapi-flat",
+  "language": "python",
+  "framework": "fastapi",
+  "architecture": "flat",
+  "endpoints": [
+    "resource"
+  ],
+  "endpoint": {
+    "name": "resource",
+    "files": [
+      "src/resource_controller.py",
+      "src/resource_service.py",
+      "src/resource_model.py"
+    ],
+    "register": [
+      "src/main.py"
+    ]
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/config",
+    "tests"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "requirements.txt",
+    "setup.py",
+    "src/__init__.py",
+    "src/config/__init__.py",
+    "src/config/config.py",
+    "src/main.py",
+    "src/resource_controller.py",
+    "src/resource_model.py",
+    "src/resource_service.py",
+    "tests/__init__.py"
+  ]
+}

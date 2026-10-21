@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "name": "go-fiber-layered",
+  "language": "go",
+  "framework": "fiber",
+  "architecture": "layered",
+  "endpoints": [
+    "user"
+  ],
+  "endpoint": {
+    "name": "user",
+    "files": [
+      "internal/models/user.go.tmpl",
+      "internal/types/user.go.tmpl",
+      "internal/service/user.go.tmpl",
+      "internal/handlers/user.go.tmpl"
+    ],
+    "register": [
+      "internal/routes/routes.go.tmpl"
+    ]
+  },
+  "ignore": [],
+  "directories": [
+    "cmd",
+    "cmd/api",
+    "internal",
+    "internal/config",
+    "internal/handlers",
+    "internal/models",
+    "internal/routes",
+    "internal/service",
+    "internal/types"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "cmd/api/main.go.tmpl",
+    "go.mod.tmpl",
+    "go.sum",
+    "internal/config/config.go.tmpl",
+    "internal/handlers/user.go.tmpl",
+    "internal/models/user.go.tmpl",
+    "internal/routes/routes.go.tmpl",
+    "internal/service/user.go.tmpl",
+    "internal/types/user.go.tmpl"
+  ]
+}

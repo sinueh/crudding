@@ -1,0 +1,19 @@
+package main
+
+import (
+	"net/http"
+
+)
+
+func SetupRouter() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	userSvc := NewUserService()
+	userHandler := NewUserHandler(userSvc)
+	mux.HandleFunc("POST /api/v1/users", userHandler.Create)
+	mux.HandleFunc("GET /api/v1/users", userHandler.List)
+	mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetByID)
+	mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.Delete)
+
+	return mux
+}

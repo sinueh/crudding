@@ -1,0 +1,19 @@
+{
+  "name": "node-js-fastify-clean-arch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/frameworks/main.js",
+    "dev": "node --watch src/frameworks/main.js"
+  },
+  "dependencies": {
+    "fastify": "^5.12.7"
+  },
+  "devDependencies": {
+    
+  }
+}

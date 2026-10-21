@@ -1,0 +1,23 @@
+package routes
+
+import (
+	"example.com/go-gin-layered/internal/handlers"
+	"example.com/go-gin-layered/internal/service"
+	"github.com/gin-gonic/gin"
+)
+
+func SetupRouter() *gin.Engine {
+	r := gin.Default()
+
+	api := r.Group("/api/v1")
+	{
+		userSvc := service.NewUserService()
+		userHandler := handlers.NewUserHandler(userSvc)
+		api.POST("/users", userHandler.Create)
+		api.GET("/users", userHandler.List)
+		api.GET("/users/:id", userHandler.GetByID)
+		api.DELETE("/users/:id", userHandler.Delete)
+	}
+
+	return r
+}

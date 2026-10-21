@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "name": "node-js-raw-clean_arch",
+  "language": "node",
+  "runtime": "js",
+  "framework": "raw",
+  "architecture": "clean_arch",
+  "endpoints": [
+    "order"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/controllers",
+    "src/adapters/presenters",
+    "src/adapters/repositories",
+    "src/entities",
+    "src/frameworks",
+    "src/frameworks/http",
+    "src/use-cases",
+    "src/use-cases/ports"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/adapters/controllers/order-controller.js",
+    "src/adapters/presenters/order-presenter.js",
+    "src/adapters/repositories/in-memory-order-repository.js",
+    "src/entities/errors.js",
+    "src/entities/order.js",
+    "src/frameworks/http/routes.js",
+    "src/frameworks/http/server.js",
+    "src/frameworks/main.js",
+    "src/use-cases/create-order.js",
+    "src/use-cases/errors.js",
+    "src/use-cases/get-order.js",
+    "src/use-cases/list-orders.js",
+    "src/use-cases/order-output.js",
+    "src/use-cases/pay-order.js",
+    "src/use-cases/ports/order-repository.js"
+  ]
+}

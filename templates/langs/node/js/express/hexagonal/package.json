@@ -1,0 +1,19 @@
+{
+  "name": "node-js-express-hexagonal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/entrypoints/main.js",
+    "dev": "node --watch src/entrypoints/main.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    
+  }
+}

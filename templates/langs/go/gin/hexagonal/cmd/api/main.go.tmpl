@@ -1,0 +1,14 @@
+package main
+
+import (
+	"log"
+
+	"example.com/go-gin-hexagonal/internal/routes"
+)
+
+func main() {
+	router := routes.SetupRouter()
+
+	log.Println("Servidor HTTP rodando em http://localhost:8080")
+	_ = router.Run(":8080")
+}

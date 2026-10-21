@@ -1,0 +1,25 @@
+package routes
+
+import (
+	"example.com/go-gin-clean-arch/internal/application"
+	"example.com/go-gin-clean-arch/internal/handlers"
+	"example.com/go-gin-clean-arch/internal/infrastructure/persistence"
+	"github.com/gin-gonic/gin"
+)
+
+func SetupRouter() *gin.Engine {
+	r := gin.Default()
+
+	api := r.Group("/api/v1")
+	{
+		userRepo := persistence.NewUserRepository()
+		userSvc := application.NewUserService(userRepo)
+		userHandler := handlers.NewUserHandler(userSvc)
+		api.POST("/users", userHandler.Create)
+		api.GET("/users", userHandler.List)
+		api.GET("/users/:id", userHandler.GetByID)
+		api.DELETE("/users/:id", userHandler.Delete)
+	}
+
+	return r
+}

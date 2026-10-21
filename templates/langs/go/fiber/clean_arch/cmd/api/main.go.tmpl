@@ -1,0 +1,14 @@
+package main
+
+import (
+	"log"
+
+	"example.com/go-fiber-clean-arch/internal/routes"
+)
+
+func main() {
+	app := routes.SetupRouter()
+
+	log.Println("Servidor HTTP rodando em http://localhost:8080")
+	_ = app.Listen(":8080")
+}

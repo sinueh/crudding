@@ -1,0 +1,5 @@
+import { MongoClient } from 'mongodb';
+
+const uri = process.env.MONGODB_URI || 'mongodb://root:rootpassword@localhost:27017/app?authSource=admin';
+export const client = new MongoClient(uri);
+export const db = client.db(process.env.DB_NAME || 'app');

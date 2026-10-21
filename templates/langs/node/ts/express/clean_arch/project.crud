@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "name": "node-ts-express-clean_arch",
+  "language": "node",
+  "runtime": "ts",
+  "framework": "express",
+  "architecture": "clean_arch",
+  "endpoints": [
+    "order"
+  ],
+  "endpoint": {
+    "name": "",
+    "files": [],
+    "register": []
+  },
+  "ignore": [],
+  "directories": [
+    "src",
+    "src/adapters",
+    "src/adapters/controllers",
+    "src/adapters/presenters",
+    "src/adapters/repositories",
+    "src/entities",
+    "src/frameworks",
+    "src/frameworks/http",
+    "src/use-cases",
+    "src/use-cases/ports"
+  ],
+  "files": [
+    ".gitignore",
+    "README.md",
+    "package.json",
+    "src/adapters/controllers/order-controller.ts",
+    "src/adapters/presenters/order-presenter.ts",
+    "src/adapters/repositories/in-memory-order-repository.ts",
+    "src/entities/errors.ts",
+    "src/entities/order.ts",
+    "src/frameworks/http/routes.ts",
+    "src/frameworks/http/server.ts",
+    "src/frameworks/http/types.ts",
+    "src/frameworks/main.ts",
+    "src/use-cases/create-order.ts",
+    "src/use-cases/errors.ts",
+    "src/use-cases/get-order.ts",
+    "src/use-cases/list-orders.ts",
+    "src/use-cases/order-output.ts",
+    "src/use-cases/pay-order.ts",
+    "src/use-cases/ports/order-repository.ts",
+    "tsconfig.json"
+  ]
+}

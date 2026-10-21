@@ -1,0 +1,24 @@
+package routes
+
+import (
+	"example.com/go-chi-hexagonal/internal/adapters/postgres"
+	"example.com/go-chi-hexagonal/internal/application"
+	"example.com/go-chi-hexagonal/internal/handlers"
+	"github.com/go-chi/chi/v5"
+)
+
+func SetupRouter() chi.Router {
+	r := chi.NewRouter()
+
+	r.Route("/api/v1", func(api chi.Router) {
+		userRepo := postgres.NewUserRepository()
+		userSvc := application.NewUserService(userRepo)
+		userHandler := handlers.NewUserHandler(userSvc)
+		api.Post("/users", userHandler.Create)
+		api.Get("/users", userHandler.List)
+		api.Get("/users/{id}", userHandler.GetByID)
+		api.Delete("/users/{id}", userHandler.Delete)
+	})
+
+	return r
+}

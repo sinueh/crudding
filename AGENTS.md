@@ -84,10 +84,6 @@ crudding/
 │   └── tui/
 │       └── menu.go              # Menu Bubble Tea para seleção interativa
 ├── templates/                   # Arquivos de template (.tmpl) para cada stack
-│   ├── databases/               # Templates de banco (postgres, mysql, mongo): compose, env, migrations, conexão
-│   └── langs/                   # Templates de linguagens (go, node, python)
-├── examples/
-│   └── go-template/             # Projeto-template de exemplo (documentação e fixture de teste; não é embutido)
 ├── assets.go                    # Declaração do embed.FS para a pasta templates/
 ├── go.mod                       # Definição de módulo e dependências
 ├── go.sum
@@ -156,7 +152,7 @@ O `TestEndpointRoundTripAllCombinations` confere isso em todas as combinações.
 
 ### `crudding init` e `crudding template <pasta> [nome]` (projetos-template)
 
-Caminho paralelo ao registry: qualquer projeto vira template, e a estrutura fica no próprio `project.crud`. O formato está documentado no `README.md` e exemplificado em `examples/go-template/`.
+Caminho paralelo ao registry: qualquer projeto vira template, e a estrutura fica no próprio `project.crud`. O formato está documentado no `README.md`.
 
 1. `custom.Init` grava (ou atualiza) o `project.crud` do diretório atual. Num manifesto novo: `name` = nome da pasta, `architecture: "custom"` e `ignore` vazio (nada é preenchido automaticamente, nem a partir do `.gitignore`). Em seguida chama `common.ListStructure`, que aplica o `ignore` e sempre pula `project.crud` e `.git`, e grava `directories` e `files`. Rodar de novo só regenera essas duas listas.
 2. `crudding template` lê o manifesto com `manifest.ReadFS`, avisa sobre arquivos fora de `files` (`custom.Unlisted`) e chama `generator.GenerateFromTemplate`.
@@ -186,7 +182,7 @@ go run ./cmd/crudding
 
 # Transformar o projeto atual em template e gerar um projeto a partir dele
 go run /caminho/do/crudding/cmd/crudding init
-go run /caminho/do/crudding/cmd/crudding template ./examples/go-template meu-app
+go run /caminho/do/crudding/cmd/crudding template ./meu-template meu-app
 
 # Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
 go run /caminho/do/crudding/cmd/crudding add endpoint
