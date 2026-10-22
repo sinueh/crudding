@@ -15,19 +15,6 @@ type File struct {
 	OutputPath   string
 }
 
-// FilesFrom aplica a convenção "um template por arquivo": cada caminho relativo
-// rel vira templateDir/rel.tmpl -> outputDir/rel.
-func FilesFrom(templateDir, outputDir string, rels ...string) []File {
-	files := make([]File, len(rels))
-	for index, rel := range rels {
-		files[index] = File{
-			TemplatePath: path.Join(templateDir, rel+".tmpl"),
-			OutputPath:   path.Join(outputDir, rel),
-		}
-	}
-	return files
-}
-
 func CreateProjectDirectory(destination string) (string, error) {
 	root, err := filepath.Abs(destination)
 	if err != nil {

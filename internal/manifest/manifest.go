@@ -175,10 +175,6 @@ func (m *Manifest) AddDatabase(name string) {
 	}
 }
 
-func (m *Manifest) SetDatabase(db string) {
-	m.AddDatabase(db)
-}
-
 // Stack descreve a combinação de forma legível, ex.: "python + fastapi + modular".
 // Partes vazias (comuns em projetos de arquitetura custom) são omitidas.
 func (m Manifest) Stack() string {
