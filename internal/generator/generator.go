@@ -83,25 +83,18 @@ func (l Language) validate(config project.Config) error {
 	return nil
 }
 
-// TemplatePath devolve o caminho relativo do template correspondente à configuração
-// sob o diretório templates/.
-func TemplatePath(config project.Config) string {
-	return filepath.ToSlash(filepath.Join("templates", "langs", config.Language, "architectures", config.Architecture, "project.crud.tmpl"))
-}
-
 type TemplateData struct {
 	common.BaseData
-	GoModule     string
-	Package      string
-	Runtime      string
-	EntryScript  string
-	EntryModule  string
-	Name         string
-	Class        string
-	Route        string
-	VarName      string
-	Modules      map[string]string
-	Dependencies []string
+	GoModule    string
+	Package     string
+	Runtime     string
+	EntryScript string
+	EntryModule string
+	Name        string
+	Class       string
+	Route       string
+	VarName     string
+	Modules     map[string]string
 }
 
 func buildTemplateData(config project.Config) TemplateData {
