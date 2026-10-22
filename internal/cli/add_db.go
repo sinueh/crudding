@@ -9,10 +9,10 @@ import (
 	"slices"
 	"strings"
 
-	"crudding"
-	"crudding/internal/generator"
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding"
+	"github.com/sinueh-andreata/crudding/internal/generator"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
 )
 
 // AddDBUsage gera o texto de ajuda do comando "crudding add db".

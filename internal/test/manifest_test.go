@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 func TestWriteAndFindFromSubdirectory(t *testing.T) {

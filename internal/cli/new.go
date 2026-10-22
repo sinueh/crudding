@@ -10,10 +10,10 @@ import (
 	"slices"
 	"strings"
 
-	"crudding"
-	"crudding/internal/generator"
-	"crudding/internal/project"
-	"crudding/internal/tui"
+	"github.com/sinueh-andreata/crudding"
+	"github.com/sinueh-andreata/crudding/internal/generator"
+	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/tui"
 )
 
 func choose(title string, options []string) (string, error) {

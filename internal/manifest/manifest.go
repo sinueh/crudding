@@ -13,7 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 const (

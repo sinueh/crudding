@@ -11,13 +11,13 @@ import (
 	"strings"
 	"text/template"
 
-	"crudding/internal/generator/common"
-	"crudding/internal/generator/custom"
-	"crudding/internal/generator/langs/golang"
-	"crudding/internal/generator/langs/node"
-	"crudding/internal/generator/langs/python"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/generator/custom"
+	"github.com/sinueh-andreata/crudding/internal/generator/langs/golang"
+	"github.com/sinueh-andreata/crudding/internal/generator/langs/node"
+	"github.com/sinueh-andreata/crudding/internal/generator/langs/python"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 // Language descreve uma linguagem suportada. É a fonte única das opções

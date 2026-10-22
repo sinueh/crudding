@@ -9,10 +9,10 @@ import (
 	"slices"
 	"strings"
 
-	"crudding/internal/generator"
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/generator"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 // RemoveEndpointUsage gera o texto de ajuda do comando "crudding remove endpoint".

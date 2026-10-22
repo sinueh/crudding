@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 // reservedNames são palavras que não podem virar nome de endpoint, porque o

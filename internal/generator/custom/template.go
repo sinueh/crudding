@@ -12,9 +12,9 @@ import (
 	"strings"
 	"text/template"
 
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 // templateFile é um arquivo do template já lido e com o nome trocado.

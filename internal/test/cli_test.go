@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"crudding/internal/cli"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/cli"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 func chdirTemp(t *testing.T, dir string) {

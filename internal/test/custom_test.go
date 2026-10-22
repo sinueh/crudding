@@ -9,8 +9,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"crudding/internal/generator/custom"
-	"crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/generator/custom"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
 )
 
 func newTemplateDir(t *testing.T, name string, files map[string]string) string {

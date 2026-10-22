@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"crudding/internal/generator/common"
-	"crudding/internal/generator/custom"
-	"crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/generator/custom"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
 )
 
 // CheckEndpointSupport confirma que o project.crud tem o campo endpoint

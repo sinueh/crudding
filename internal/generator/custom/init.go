@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
 )
 
 // Init grava em dir o project.crud com a estrutura do projeto (directories e

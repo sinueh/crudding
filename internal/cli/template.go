@@ -8,10 +8,10 @@ import (
 	"slices"
 	"strings"
 
-	"crudding/internal/generator"
-	"crudding/internal/generator/custom"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh-andreata/crudding/internal/generator"
+	"github.com/sinueh-andreata/crudding/internal/generator/custom"
+	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh-andreata/crudding/internal/project"
 )
 
 // TemplateUsage gera o texto de ajuda do comando "crudding template".
