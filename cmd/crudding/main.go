@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/sinueh-andreata/crudding/internal/cli"
+	"github.com/sinueh/crudding/internal/cli"
 )
 
 func main() {

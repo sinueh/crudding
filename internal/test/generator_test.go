@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sinueh-andreata/crudding/internal/generator"
-	"github.com/sinueh-andreata/crudding/internal/manifest"
-	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 // templates aponta para a raiz do repositório, onde fica a pasta templates/.

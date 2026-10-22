@@ -1,4 +1,4 @@
-module github.com/sinueh-andreata/crudding
+module github.com/sinueh/crudding
 
 go 1.27
 

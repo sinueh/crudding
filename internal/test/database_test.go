@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sinueh-andreata/crudding"
-	"github.com/sinueh-andreata/crudding/internal/cli"
-	"github.com/sinueh-andreata/crudding/internal/generator"
-	"github.com/sinueh-andreata/crudding/internal/manifest"
-	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh/crudding"
+	"github.com/sinueh/crudding/internal/cli"
+	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 func TestAddDatabaseGoPostgres(t *testing.T) {

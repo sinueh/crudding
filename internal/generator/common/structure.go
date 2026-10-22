@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/manifest"
 )
 
 // ListStructure lista as pastas e os arquivos de fsys que não casam com

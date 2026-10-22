@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sinueh-andreata/crudding/internal/generator"
-	"github.com/sinueh-andreata/crudding/internal/manifest"
-	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 func generateProject(t *testing.T, config project.Config) (string, manifest.Manifest) {

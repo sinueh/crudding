@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sinueh-andreata/crudding/internal/generator/common"
+	"github.com/sinueh/crudding/internal/generator/common"
 )
 
 var patchTemplates = fstest.MapFS{

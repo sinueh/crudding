@@ -4,8 +4,8 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/sinueh-andreata/crudding/internal/manifest"
-	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 // Plan descreve tudo o que um gerador de linguagem quer produzir. Os geradores

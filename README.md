@@ -7,7 +7,7 @@ Interactive CLI written in Go 1.27 that generates projects from templates embedd
 ## Install the `crudding` Command
 
 ```sh
-go install github.com/sinueh-andreata/crudding/cmd/crudding@latest
+go install github.com/sinueh/crudding/cmd/crudding@latest
 ```
 
 Or build and install locally from source:

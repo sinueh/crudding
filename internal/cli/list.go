@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/generator"
 )
 
 // StacksUsage gera o texto de ajuda do comando "crudding stacks".

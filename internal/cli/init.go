@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sinueh-andreata/crudding/internal/generator/custom"
-	"github.com/sinueh-andreata/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/generator/custom"
+	"github.com/sinueh/crudding/internal/manifest"
 )
 
 // InitUsage gera o texto de ajuda do comando "crudding init".

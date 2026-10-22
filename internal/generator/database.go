@@ -10,9 +10,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sinueh-andreata/crudding/internal/generator/common"
-	"github.com/sinueh-andreata/crudding/internal/manifest"
-	"github.com/sinueh-andreata/crudding/internal/project"
+	"github.com/sinueh/crudding/internal/generator/common"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 // SupportedDatabases lista os bancos de dados suportados pela CLI.

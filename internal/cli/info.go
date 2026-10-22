@@ -10,8 +10,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"crudding/internal/generator"
-	"crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/manifest"
 )
 
 var validArchitectures = []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
