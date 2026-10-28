@@ -5,24 +5,24 @@
   "framework": "{{.Framework}}",
   "architecture": "flat",
   "vars": {
-    "Name": "resource",
-    "Class": "Resource",
-    "Route": "resource",
+    "Name": "user",
+    "Class": "User",
+    "Route": "user",
     "EntryModule": "src.main",
     "Modules": {
       "config": "src.config.config",
-      "controller": "src.resource_controller",
-      "service": "src.resource_service",
-      "model": "src.resource_model"
+      "controller": "src.user_controller",
+      "service": "src.user_service",
+      "model": "src.user_model"
     }
   },
-  "endpoints": ["resource"],
+  "endpoints": ["user"],
   "endpoint": {
-    "name": "resource",
+    "name": "user",
     "files": [
-      "src/resource_controller.py",
-      "src/resource_service.py",
-      "src/resource_model.py"
+      "src/user_controller.py",
+      "src/user_service.py",
+      "src/user_model.py"
     ],
     "register": [
       "src/main.py"
@@ -72,15 +72,15 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/resource_controller.py"
+      "to": "src/user_controller.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/resource_model.py"
+      "to": "src/user_model.py"
     },
     {
       "from": "architectures/common/service.py.tmpl",
-      "to": "src/resource_service.py"
+      "to": "src/user_service.py"
     }
   ]
 }

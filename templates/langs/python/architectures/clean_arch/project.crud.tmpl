@@ -5,40 +5,40 @@
   "framework": "{{.Framework}}",
   "architecture": "clean_arch",
   "vars": {
-    "Name": "resource",
-    "Class": "Resource",
-    "Route": "resource",
+    "Name": "user",
+    "Class": "User",
+    "Route": "user",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.frameworks_and_drivers.web.resource_controller",
-      "service": "src.app.interface_adapters.controllers.resource_controller",
-      "presenter": "src.app.interface_adapters.presenters.resource_presenter",
-      "create": "src.app.application.use_cases.create_resource",
-      "delete": "src.app.application.use_cases.delete_resource",
-      "get": "src.app.application.use_cases.get_resource",
-      "list": "src.app.application.use_cases.list_resource",
-      "update": "src.app.application.use_cases.update_resource",
-      "port": "src.app.application.port.outbound.resource_repository",
-      "adapter": "src.app.interface_adapters.persistence.resource_repository",
-      "model": "src.app.domain.model.resource"
+      "controller": "src.app.frameworks_and_drivers.web.user_controller",
+      "service": "src.app.interface_adapters.controllers.user_controller",
+      "presenter": "src.app.interface_adapters.presenters.user_presenter",
+      "create": "src.app.application.use_cases.create_user",
+      "delete": "src.app.application.use_cases.delete_user",
+      "get": "src.app.application.use_cases.get_user",
+      "list": "src.app.application.use_cases.list_user",
+      "update": "src.app.application.use_cases.update_user",
+      "port": "src.app.application.port.outbound.user_repository",
+      "adapter": "src.app.interface_adapters.persistence.user_repository",
+      "model": "src.app.domain.model.user"
     }
   },
-  "endpoints": ["resource"],
+  "endpoints": ["user"],
   "endpoint": {
-    "name": "resource",
+    "name": "user",
     "files": [
-      "src/app/frameworks_and_drivers/web/resource_controller.py",
-      "src/app/interface_adapters/controllers/resource_controller.py",
-      "src/app/interface_adapters/presenters/resource_presenter.py",
-      "src/app/application/use_cases/create_resource.py",
-      "src/app/application/use_cases/delete_resource.py",
-      "src/app/application/use_cases/get_resource.py",
-      "src/app/application/use_cases/list_resource.py",
-      "src/app/application/use_cases/update_resource.py",
-      "src/app/application/port/outbound/resource_repository.py",
-      "src/app/interface_adapters/persistence/resource_repository.py",
-      "src/app/domain/model/resource.py"
+      "src/app/frameworks_and_drivers/web/user_controller.py",
+      "src/app/interface_adapters/controllers/user_controller.py",
+      "src/app/interface_adapters/presenters/user_presenter.py",
+      "src/app/application/use_cases/create_user.py",
+      "src/app/application/use_cases/delete_user.py",
+      "src/app/application/use_cases/get_user.py",
+      "src/app/application/use_cases/list_user.py",
+      "src/app/application/use_cases/update_user.py",
+      "src/app/application/port/outbound/user_repository.py",
+      "src/app/interface_adapters/persistence/user_repository.py",
+      "src/app/domain/model/user.py"
     ],
     "register": [
       "src/app/main.py"
@@ -96,47 +96,47 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/frameworks_and_drivers/web/resource_controller.py"
+      "to": "src/app/frameworks_and_drivers/web/user_controller.py"
     },
     {
       "from": "architectures/clean_arch/controller.py.tmpl",
-      "to": "src/app/interface_adapters/controllers/resource_controller.py"
+      "to": "src/app/interface_adapters/controllers/user_controller.py"
     },
     {
       "from": "architectures/clean_arch/presenter.py.tmpl",
-      "to": "src/app/interface_adapters/presenters/resource_presenter.py"
+      "to": "src/app/interface_adapters/presenters/user_presenter.py"
     },
     {
       "from": "architectures/clean_arch/create.py.tmpl",
-      "to": "src/app/application/use_cases/create_resource.py"
+      "to": "src/app/application/use_cases/create_user.py"
     },
     {
       "from": "architectures/clean_arch/delete.py.tmpl",
-      "to": "src/app/application/use_cases/delete_resource.py"
+      "to": "src/app/application/use_cases/delete_user.py"
     },
     {
       "from": "architectures/clean_arch/get.py.tmpl",
-      "to": "src/app/application/use_cases/get_resource.py"
+      "to": "src/app/application/use_cases/get_user.py"
     },
     {
       "from": "architectures/clean_arch/list.py.tmpl",
-      "to": "src/app/application/use_cases/list_resource.py"
+      "to": "src/app/application/use_cases/list_user.py"
     },
     {
       "from": "architectures/clean_arch/update.py.tmpl",
-      "to": "src/app/application/use_cases/update_resource.py"
+      "to": "src/app/application/use_cases/update_user.py"
     },
     {
       "from": "architectures/common/repository_port.py.tmpl",
-      "to": "src/app/application/port/outbound/resource_repository.py"
+      "to": "src/app/application/port/outbound/user_repository.py"
     },
     {
       "from": "architectures/common/repository_adapter.py.tmpl",
-      "to": "src/app/interface_adapters/persistence/resource_repository.py"
+      "to": "src/app/interface_adapters/persistence/user_repository.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/domain/model/resource.py"
+      "to": "src/app/domain/model/user.py"
     }
   ]
 }

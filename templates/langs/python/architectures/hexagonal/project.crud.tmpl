@@ -5,28 +5,28 @@
   "framework": "{{.Framework}}",
   "architecture": "hexagonal",
   "vars": {
-    "Name": "resource",
-    "Class": "Resource",
-    "Route": "resource",
+    "Name": "user",
+    "Class": "User",
+    "Route": "user",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.routers.resource_controller",
-      "service": "src.app.application.resource_service",
-      "port": "src.app.ports.resource_repository",
-      "adapter": "src.app.infrastructure.resource_repository",
-      "model": "src.app.domain.resource"
+      "controller": "src.app.routers.user_controller",
+      "service": "src.app.application.user_service",
+      "port": "src.app.ports.user_repository",
+      "adapter": "src.app.infrastructure.user_repository",
+      "model": "src.app.domain.user"
     }
   },
-  "endpoints": ["resource"],
+  "endpoints": ["user"],
   "endpoint": {
-    "name": "resource",
+    "name": "user",
     "files": [
-      "src/app/routers/resource_controller.py",
-      "src/app/application/resource_service.py",
-      "src/app/ports/resource_repository.py",
-      "src/app/infrastructure/resource_repository.py",
-      "src/app/domain/resource.py"
+      "src/app/routers/user_controller.py",
+      "src/app/application/user_service.py",
+      "src/app/ports/user_repository.py",
+      "src/app/infrastructure/user_repository.py",
+      "src/app/domain/user.py"
     ],
     "register": [
       "src/app/main.py"
@@ -97,23 +97,23 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/routers/resource_controller.py"
+      "to": "src/app/routers/user_controller.py"
     },
     {
       "from": "architectures/hexagonal/service.py.tmpl",
-      "to": "src/app/application/resource_service.py"
+      "to": "src/app/application/user_service.py"
     },
     {
       "from": "architectures/common/repository_port.py.tmpl",
-      "to": "src/app/ports/resource_repository.py"
+      "to": "src/app/ports/user_repository.py"
     },
     {
       "from": "architectures/common/repository_adapter.py.tmpl",
-      "to": "src/app/infrastructure/resource_repository.py"
+      "to": "src/app/infrastructure/user_repository.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/domain/resource.py"
+      "to": "src/app/domain/user.py"
     }
   ]
 }

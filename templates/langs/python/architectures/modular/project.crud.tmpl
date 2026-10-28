@@ -5,25 +5,25 @@
   "framework": "{{.Framework}}",
   "architecture": "modular",
   "vars": {
-    "Name": "resource",
-    "Class": "Resource",
-    "Route": "resource",
+    "Name": "user",
+    "Class": "User",
+    "Route": "user",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.resource.controller",
-      "service": "src.app.resource.service",
-      "model": "src.app.resource.models"
+      "controller": "src.app.user.controller",
+      "service": "src.app.user.service",
+      "model": "src.app.user.models"
     }
   },
-  "endpoints": ["resource"],
+  "endpoints": ["user"],
   "endpoint": {
-    "name": "resource",
+    "name": "user",
     "files": [
-      "src/app/resource/controller.py",
-      "src/app/resource/service.py",
-      "src/app/resource/models.py",
-      "src/app/resource/__init__.py"
+      "src/app/user/controller.py",
+      "src/app/user/service.py",
+      "src/app/user/models.py",
+      "src/app/user/__init__.py"
     ],
     "register": [
       "src/app/main.py"
@@ -33,7 +33,7 @@
     "src",
     "src/app",
     "src/app/config",
-    "src/app/resource"
+    "src/app/user"
   ],
   "files": [
     {
@@ -62,7 +62,7 @@
     },
     {
       "from": "architectures/common/__init__.py.tmpl",
-      "to": "src/app/resource/__init__.py"
+      "to": "src/app/user/__init__.py"
     },
     {
       "from": "architectures/common/config.py.tmpl",
@@ -74,15 +74,15 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/resource/controller.py"
+      "to": "src/app/user/controller.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/resource/models.py"
+      "to": "src/app/user/models.py"
     },
     {
       "from": "architectures/common/service.py.tmpl",
-      "to": "src/app/resource/service.py"
+      "to": "src/app/user/service.py"
     }
   ]
 }
