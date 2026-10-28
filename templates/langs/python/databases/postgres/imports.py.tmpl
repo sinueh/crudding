@@ -1,0 +1,5 @@
+{{if eq .ORM "sqlalchemy"}}from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+{{else}}import psycopg2
+from psycopg2.extras import RealDictCursor
+{{end}}

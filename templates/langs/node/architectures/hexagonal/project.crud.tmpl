@@ -4,6 +4,9 @@
   "language": "node",
   "framework": "{{.Framework}}",
   "architecture": "hexagonal",
+  "vars": {
+    "EntryScript": "src/entrypoints/main.{{.Runtime}}"
+  },
   "runtime": "{{.Runtime}}",
   "endpoints": ["product"],
   "directories": [

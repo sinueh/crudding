@@ -367,8 +367,8 @@ func TestNewProjectWithDatabaseGo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read config.go error = %v", err)
 	}
-	if !strings.Contains(string(configContent), "PostgresConfig") {
-		t.Errorf("config.go missing PostgresConfig: %s", string(configContent))
+	if count := strings.Count(string(configContent), "type PostgresConfig struct"); count != 1 {
+		t.Errorf("config.go tem %d PostgresConfig, want 1: %s", count, string(configContent))
 	}
 
 	goModContent, err := os.ReadFile(filepath.Join(projectDir, "go.mod"))
@@ -403,8 +403,8 @@ func TestNewProjectWithDatabasePython(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read config.py error = %v", err)
 	}
-	if !strings.Contains(string(configContent), "MONGODB_URI") {
-		t.Errorf("config.py missing MONGODB_URI: %s", string(configContent))
+	if count := strings.Count(string(configContent), "def get_mongo_database"); count != 1 {
+		t.Errorf("config.py tem %d get_mongo_database, want 1: %s", count, string(configContent))
 	}
 
 	reqContent, err := os.ReadFile(filepath.Join(projectDir, "requirements.txt"))
@@ -451,5 +451,8 @@ func TestAddMultipleDatabases(t *testing.T) {
 	}
 	if !strings.Contains(contentStr, "MongoConfig") {
 		t.Errorf("config.go missing MongoConfig: %s", contentStr)
+	}
+	if count := strings.Count(contentStr, "\t\"fmt\"\n"); count != 1 {
+		t.Errorf("config.go importa fmt %d vezes, want 1: %s", count, contentStr)
 	}
 }

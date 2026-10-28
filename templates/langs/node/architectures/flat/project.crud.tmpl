@@ -4,6 +4,9 @@
   "language": "node",
   "framework": "{{.Framework}}",
   "architecture": "flat",
+  "vars": {
+    "EntryScript": "src/main.{{.Runtime}}"
+  },
   "runtime": "{{.Runtime}}",
   "endpoints": ["tasks"],
   "directories": [

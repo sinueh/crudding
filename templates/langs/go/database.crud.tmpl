@@ -1,0 +1,11 @@
+{
+  "inserts": [
+    { "marker": "// crudding:db-imports", "unique": true, "from": "langs/go/databases/{{.Database}}/imports.go.tmpl" },
+    { "marker": "// crudding:db-struct", "from": "langs/go/databases/{{.Database}}/struct.go.tmpl" },
+    { "marker": "// crudding:db-load", "from": "langs/go/databases/{{.Database}}/load.go.tmpl" },
+    { "marker": "// crudding:db-methods", "from": "langs/go/databases/{{.Database}}/methods.go.tmpl" }
+  ],
+  "append": [
+    { "into": "go.mod", "from": "langs/go/databases/{{.Database}}/go.mod.tmpl" }
+  ]
+}

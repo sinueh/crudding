@@ -4,6 +4,26 @@
   "language": "python",
   "framework": "{{.Framework}}",
   "architecture": "clean_arch",
+  "vars": {
+    "Name": "resource",
+    "Class": "Resource",
+    "Route": "resource",
+    "EntryModule": "src.app.main",
+    "Modules": {
+      "config": "src.app.config.config",
+      "controller": "src.app.frameworks_and_drivers.web.resource_controller",
+      "service": "src.app.interface_adapters.controllers.resource_controller",
+      "presenter": "src.app.interface_adapters.presenters.resource_presenter",
+      "create": "src.app.application.use_cases.create_resource",
+      "delete": "src.app.application.use_cases.delete_resource",
+      "get": "src.app.application.use_cases.get_resource",
+      "list": "src.app.application.use_cases.list_resource",
+      "update": "src.app.application.use_cases.update_resource",
+      "port": "src.app.application.port.outbound.resource_repository",
+      "adapter": "src.app.interface_adapters.persistence.resource_repository",
+      "model": "src.app.domain.model.resource"
+    }
+  },
   "endpoints": ["resource"],
   "endpoint": {
     "name": "resource",

@@ -4,6 +4,9 @@
   "language": "node",
   "framework": "{{.Framework}}",
   "architecture": "clean_arch",
+  "vars": {
+    "EntryScript": "src/frameworks/main.{{.Runtime}}"
+  },
   "runtime": "{{.Runtime}}",
   "endpoints": ["order"],
   "directories": [

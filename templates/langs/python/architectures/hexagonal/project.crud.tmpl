@@ -4,6 +4,20 @@
   "language": "python",
   "framework": "{{.Framework}}",
   "architecture": "hexagonal",
+  "vars": {
+    "Name": "resource",
+    "Class": "Resource",
+    "Route": "resource",
+    "EntryModule": "src.app.main",
+    "Modules": {
+      "config": "src.app.config.config",
+      "controller": "src.app.routers.resource_controller",
+      "service": "src.app.application.resource_service",
+      "port": "src.app.ports.resource_repository",
+      "adapter": "src.app.infrastructure.resource_repository",
+      "model": "src.app.domain.resource"
+    }
+  },
   "endpoints": ["resource"],
   "endpoint": {
     "name": "resource",

@@ -159,7 +159,7 @@ func TestCustomArchitectureCommandsUnsupported(t *testing.T) {
 	if _, err := generator.RemoveEndpoint(root, m, "invoice"); err == nil || !strings.Contains(err.Error(), `campo "endpoint"`) {
 		t.Errorf("RemoveEndpoint() err = %v", err)
 	}
-	if _, err := generator.AddDatabase(root, m, "postgres", templates); err == nil || !strings.Contains(err.Error(), "arquitetura custom") {
+	if _, err := generator.AddDatabase(root, m, "postgres", templates); err == nil || !strings.Contains(err.Error(), "não é suportado para a linguagem") {
 		t.Errorf("AddDatabase() err = %v", err)
 	}
 }

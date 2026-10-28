@@ -1,4 +1,4 @@
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
 from {{.Modules.model}} import {{.Class}}
 from {{.Modules.port}} import {{.Class}}Repository
 from {{.Modules.adapter}} import {{.Class}}RepositoryAdapter
@@ -30,7 +30,7 @@ class {{.Class}}Service:
         return _to_dict(item) if item is not None else None
 
     def create(self, payload: dict) -> dict:
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
         item = {{.Class}}(id=payload.get("id"))
         return _to_dict(self.repository.save(item))
 {{- else }}
@@ -38,7 +38,7 @@ class {{.Class}}Service:
 {{- end }}
 
     def update(self, item_id: str, payload: dict) -> dict:
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
         item = self.repository.find_by_id(item_id)
         if not item:
             raise ValueError(f"{{.Class}} {item_id} não encontrado")

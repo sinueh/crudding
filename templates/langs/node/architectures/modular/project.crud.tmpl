@@ -4,6 +4,9 @@
   "language": "node",
   "framework": "{{.Framework}}",
   "architecture": "modular",
+  "vars": {
+    "EntryScript": "src/main.{{.Runtime}}"
+  },
   "runtime": "{{.Runtime}}",
   "endpoints": ["catalog", "orders"],
   "directories": [

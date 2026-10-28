@@ -1,4 +1,4 @@
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
 from sqlalchemy import Column, String
 from {{.Modules.config}} import Base
 

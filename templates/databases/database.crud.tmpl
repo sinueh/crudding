@@ -1,0 +1,23 @@
+{
+  "inserts": [
+    {
+      "into": "docker-compose.yml",
+      "base": "databases/docker-compose.yml.tmpl",
+      "marker": "# crudding:compose-services",
+      "from": "databases/{{.Database}}/compose-service.yml.tmpl"
+    },
+    {
+      "into": "docker-compose.yml",
+      "base": "databases/docker-compose.yml.tmpl",
+      "marker": "# crudding:compose-volumes",
+      "from": "databases/{{.Database}}/compose-volume.yml.tmpl"
+    },
+    {
+      "into": ".env.example",
+      "base": "databases/.env.example.tmpl",
+      "marker": "# crudding:env",
+      "from": "databases/{{.Database}}/env.tmpl"
+    }
+  ],
+  "migrations": "databases/{{.Database}}/migrations"
+}

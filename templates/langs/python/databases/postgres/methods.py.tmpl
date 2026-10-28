@@ -1,0 +1,52 @@
+{{if eq .ORM "sqlalchemy"}}
+
+Base = declarative_base()
+
+
+def get_sqlalchemy_engine():
+    """Retorna a engine do SQLAlchemy para PostgreSQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        database_url = (
+            f"postgresql+psycopg2://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@"
+            f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'app')}"
+        )
+    return create_engine(database_url)
+
+
+engine = get_sqlalchemy_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """Generator de sessão do SQLAlchemy."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Cria as tabelas no banco de dados se não existirem."""
+    Base.metadata.create_all(bind=engine)
+{{else}}
+
+def get_postgres_connection():
+    """Retorna uma conexão ativa com o banco PostgreSQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        port=os.getenv("DB_PORT", "5432"),
+        user=os.getenv("DB_USER", "postgres"),
+        password=os.getenv("DB_PASSWORD", "postgres"),
+        dbname=os.getenv("DB_NAME", "app"),
+        cursor_factory=RealDictCursor,
+    )
+
+
+get_connection = get_postgres_connection
+{{end}}

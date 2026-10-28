@@ -4,6 +4,18 @@
   "language": "python",
   "framework": "{{.Framework}}",
   "architecture": "modular",
+  "vars": {
+    "Name": "resource",
+    "Class": "Resource",
+    "Route": "resource",
+    "EntryModule": "src.app.main",
+    "Modules": {
+      "config": "src.app.config.config",
+      "controller": "src.app.resource.controller",
+      "service": "src.app.resource.service",
+      "model": "src.app.resource.models"
+    }
+  },
   "endpoints": ["resource"],
   "endpoint": {
     "name": "resource",

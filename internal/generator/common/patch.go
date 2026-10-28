@@ -58,7 +58,7 @@ type Result struct {
 func Apply(root string, templates fs.FS, patch Patch) (result Result, err error) {
 	writes := make([]RawFile, 0, len(patch.Files)+len(patch.Raw))
 	for _, file := range patch.Files {
-		content, err := render(templates, file.TemplatePath, patch.Data)
+		content, err := Render(templates, file.TemplatePath, patch.Data)
 		if err != nil {
 			return Result{}, err
 		}
@@ -71,10 +71,24 @@ func Apply(root string, templates fs.FS, patch Patch) (result Result, err error)
 		}
 	}
 
+	// Inserts e Rewrites também valem para os arquivos novos do Patch (ex.: um
+	// docker-compose.yml criado a partir de uma base só com os markers).
+	pending := map[string]int{}
+	for index, file := range writes {
+		pending[file.OutputPath] = index
+	}
 	originals := map[string][]byte{}
 	edited := map[string][]byte{}
 	var editOrder []string
 	edit := func(rel string, change func([]byte) ([]byte, error)) error {
+		if index, ok := pending[rel]; ok {
+			changed, changeErr := change(writes[index].Content)
+			if changeErr != nil {
+				return changeErr
+			}
+			writes[index].Content = changed
+			return nil
+		}
 		current, ok := edited[rel]
 		if !ok {
 			var readErr error

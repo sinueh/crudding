@@ -4,6 +4,12 @@
   "language": "go",
   "framework": "{{.Framework}}",
   "architecture": "hexagonal",
+  "vars": {
+    "GoModule": "example.com/{{.ProjectSlug}}",
+    "Package": "user",
+    "VarName": "user",
+    "Class": "User"
+  },
   "endpoints": ["user"],
   "endpoint": {
     "name": "user",

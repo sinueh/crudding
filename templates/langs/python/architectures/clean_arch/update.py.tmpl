@@ -6,7 +6,7 @@ class Update{{.Class}}:
         self.repository = repository
 
     def execute(self, item_id: str, data: dict) -> {{.Class}}:
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
         item = self.repository.find_by_id(item_id)
         if not item:
             raise ValueError(f"{{.Class}} {item_id} não encontrado")

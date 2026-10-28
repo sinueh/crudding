@@ -1,0 +1,31 @@
+type MySQLConfig struct {
+	DSN string
+}
+
+func loadMySQLConfig() MySQLConfig {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = fmt.Sprintf(
+			"%s:%s@tcp(%s:%s)/%s?parseTime=true",
+			getEnv("DB_USER", "user"),
+			getEnv("DB_PASSWORD", "password"),
+			getEnv("DB_HOST", "localhost"),
+			getEnv("DB_PORT", "3306"),
+			getEnv("DB_NAME", "app"),
+		)
+	}
+	return MySQLConfig{DSN: dsn}
+}
+
+// ConnectMySQL estabelece e valida a conexão com o MySQL.
+func ConnectMySQL(cfg MySQLConfig) (*sql.DB, error) {
+	db, err := sql.Open("mysql", cfg.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("abrir conexão com mysql: %w", err)
+	}
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("ping no mysql: %w", err)
+	}
+	return db, nil
+}
+

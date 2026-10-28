@@ -1,6 +1,6 @@
 from {{.Modules.model}} import {{.Class}}
 from {{.Modules.port}} import {{.Class}}Repository
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
 from sqlalchemy.orm import Session
 {{- end }}
 
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 class {{.Class}}RepositoryAdapter({{.Class}}Repository):
     """Adapter de persistência de {{.Class}}."""
 
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
     def __init__(self, db: Session = None):
         if db is None:
             from {{.Modules.config}} import SessionLocal
