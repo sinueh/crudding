@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"crudding/internal/generator"
-	"crudding/internal/generator/common"
-	"crudding/internal/manifest"
-	"crudding/internal/project"
+	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/generator/common"
+	"github.com/sinueh/crudding/internal/manifest"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 // assertStructureInSync confere que directories e files do project.crud são
