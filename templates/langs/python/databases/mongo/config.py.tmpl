@@ -1,0 +1,7 @@
+MONGODB_URI: str = os.getenv(
+    "MONGODB_URI",
+    f"mongodb://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', 'rootpassword')}@"
+    f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '27017')}/"
+    f"{os.getenv('DB_NAME', 'app')}?authSource=admin",
+)
+MONGODB_DB_NAME: str = os.getenv("DB_NAME", "app")

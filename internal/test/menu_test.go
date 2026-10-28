@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"crudding/internal/tui"
+	"github.com/sinueh/crudding/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

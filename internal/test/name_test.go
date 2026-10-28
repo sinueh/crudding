@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"crudding/internal/project"
+	"github.com/sinueh/crudding/internal/project"
 )
 
 func TestReadProjectName(t *testing.T) {

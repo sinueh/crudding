@@ -4,6 +4,9 @@
   "language": "node",
   "framework": "{{.Framework}}",
   "architecture": "layered",
+  "vars": {
+    "EntryScript": "src/main.{{.Runtime}}"
+  },
   "runtime": "{{.Runtime}}",
   "endpoints": ["user", "order"],
   "directories": [

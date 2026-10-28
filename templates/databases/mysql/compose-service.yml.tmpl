@@ -1,0 +1,13 @@
+mysql:
+  image: mysql:8.4
+  container_name: {{.ProjectSlug}}-mysql
+  restart: unless-stopped
+  environment:
+    MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    MYSQL_DATABASE: ${DB_NAME:-app}
+    MYSQL_USER: ${DB_USER:-user}
+    MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+  ports:
+    - "${DB_PORT:-3306}:3306"
+  volumes:
+    - mysql_data:/var/lib/mysql

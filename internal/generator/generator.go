@@ -83,100 +83,6 @@ func (l Language) validate(config project.Config) error {
 	return nil
 }
 
-type TemplateData struct {
-	common.BaseData
-	GoModule    string
-	Package     string
-	Runtime     string
-	EntryScript string
-	EntryModule string
-	Name        string
-	Class       string
-	Route       string
-	VarName     string
-	Modules     map[string]string
-}
-
-func buildTemplateData(config project.Config) TemplateData {
-	data := TemplateData{
-		BaseData: common.NewBaseData(config),
-		Runtime:  config.Runtime,
-	}
-
-	switch config.Language {
-	case "go":
-		data.GoModule = "example.com/" + project.Slug(config.ProjectName)
-		data.Package = "user"
-		data.VarName = "user"
-		data.Class = "User"
-	case "node":
-		var nodeEntry = map[string]string{
-			"flat":       "src/main",
-			"layered":    "src/main",
-			"modular":    "src/main",
-			"hexagonal":  "src/entrypoints/main",
-			"clean_arch": "src/frameworks/main",
-		}
-		data.EntryScript = nodeEntry[config.Architecture] + "." + config.Runtime
-	case "python":
-		data.Package = strings.ReplaceAll(strings.ToLower(config.ProjectName), "-", "_")
-		data.Name = "resource"
-		data.Class = "Resource"
-		data.Route = "resource"
-		pkgDir := "src/app"
-		if config.Architecture == "flat" {
-			pkgDir = "src"
-		}
-		data.EntryScript = path.Join(pkgDir, "main.py")
-		data.EntryModule = strings.ReplaceAll(strings.TrimSuffix(data.EntryScript, ".py"), "/", ".")
-		data.Modules = pythonModules(pkgDir, config.Architecture)
-	}
-
-	return data
-}
-
-func pythonModules(pkgDir, architecture string) map[string]string {
-	mod := func(file string) string {
-		return strings.ReplaceAll(strings.TrimSuffix(file, ".py"), "/", ".")
-	}
-	m := map[string]string{
-		"config": mod(path.Join(pkgDir, "config", "config.py")),
-	}
-	switch architecture {
-	case "flat":
-		m["controller"] = mod(path.Join(pkgDir, "resource_controller.py"))
-		m["service"] = mod(path.Join(pkgDir, "resource_service.py"))
-		m["model"] = mod(path.Join(pkgDir, "resource_model.py"))
-	case "layered":
-		m["controller"] = mod(path.Join(pkgDir, "controllers", "resource_controller.py"))
-		m["service"] = mod(path.Join(pkgDir, "services", "resource_service.py"))
-		m["model"] = mod(path.Join(pkgDir, "models", "resource.py"))
-	case "modular":
-		m["controller"] = mod(path.Join(pkgDir, "resource", "controller.py"))
-		m["service"] = mod(path.Join(pkgDir, "resource", "service.py"))
-		m["model"] = mod(path.Join(pkgDir, "resource", "models.py"))
-	case "hexagonal":
-		m["controller"] = mod(path.Join(pkgDir, "routers", "resource_controller.py"))
-		m["service"] = mod(path.Join(pkgDir, "application", "resource_service.py"))
-		m["port"] = mod(path.Join(pkgDir, "ports", "resource_repository.py"))
-		m["adapter"] = mod(path.Join(pkgDir, "infrastructure", "resource_repository.py"))
-		m["model"] = mod(path.Join(pkgDir, "domain", "resource.py"))
-	case "clean_arch":
-		m["controller"] = mod(path.Join(pkgDir, "frameworks_and_drivers", "web", "resource_controller.py"))
-		m["service"] = mod(path.Join(pkgDir, "interface_adapters", "controllers", "resource_controller.py"))
-		m["presenter"] = mod(path.Join(pkgDir, "interface_adapters", "presenters", "resource_presenter.py"))
-		m["create"] = mod(path.Join(pkgDir, "application", "use_cases", "create_resource.py"))
-		m["delete"] = mod(path.Join(pkgDir, "application", "use_cases", "delete_resource.py"))
-		m["get"] = mod(path.Join(pkgDir, "application", "use_cases", "get_resource.py"))
-		m["list"] = mod(path.Join(pkgDir, "application", "use_cases", "list_resource.py"))
-		m["update"] = mod(path.Join(pkgDir, "application", "use_cases", "update_resource.py"))
-		m["port"] = mod(path.Join(pkgDir, "application", "port", "outbound", "resource_repository.py"))
-		m["adapter"] = mod(path.Join(pkgDir, "interface_adapters", "persistence", "resource_repository.py"))
-		m["model"] = mod(path.Join(pkgDir, "domain", "model", "resource.py"))
-	}
-	return m
-}
-
 func Generate(destination string, config project.Config, templates fs.FS) error {
 	language, ok := Lookup(config.Language)
 	if !ok {
@@ -197,9 +103,9 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 		return fmt.Errorf("ler template de manifesto %s: %w", manifestTmplPath, err)
 	}
 
-	data := buildTemplateData(config)
+	data := common.TemplateData(config)
 
-	parsedTmpl, err := template.New("manifest").Parse(string(manifestTmplBytes))
+	parsedTmpl, err := template.New("manifest").Option("missingkey=error").Parse(string(manifestTmplBytes))
 	if err != nil {
 		return fmt.Errorf("interpretar manifesto %s: %w", manifestTmplPath, err)
 	}
@@ -218,6 +124,9 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 	if config.Runtime != "" {
 		m.Runtime = config.Runtime
 	}
+	for key, value := range m.Vars {
+		data[key] = value
+	}
 
 	plan, err := custom.Plan(langFS, m, config.ProjectName, data)
 	if err != nil {
@@ -225,6 +134,7 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 	}
 	if plan.Manifest != nil {
 		plan.Manifest.Template = ""
+		plan.Manifest.Vars = nil
 		plan.Manifest.ORM = config.ORM
 		if len(plan.Manifest.Endpoints) == 0 && plan.Manifest.Endpoint.Name != "" {
 			plan.Manifest.Endpoints = []string{plan.Manifest.Endpoint.Name}

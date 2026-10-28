@@ -1,0 +1,48 @@
+{{if eq .ORM "sqlalchemy"}}
+
+Base = declarative_base()
+
+
+def get_sqlalchemy_engine():
+    """Retorna a engine do SQLAlchemy para MySQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        database_url = (
+            f"mysql+pymysql://{config.MYSQL_USER}:{config.MYSQL_PASSWORD}@"
+            f"{config.MYSQL_HOST}:{config.MYSQL_PORT}/{config.MYSQL_DB}"
+        )
+    return create_engine(database_url)
+
+
+engine = get_sqlalchemy_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """Generator de sessão do SQLAlchemy."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Cria as tabelas no banco de dados se não existirem."""
+    Base.metadata.create_all(bind=engine)
+{{else}}
+
+def get_mysql_connection():
+    """Retorna uma conexão ativa com o banco MySQL."""
+    return pymysql.connect(
+        host=config.MYSQL_HOST,
+        port=config.MYSQL_PORT,
+        user=config.MYSQL_USER,
+        password=config.MYSQL_PASSWORD,
+        database=config.MYSQL_DB,
+        cursorclass=DictCursor,
+    )
+
+
+get_connection = get_mysql_connection
+{{end}}

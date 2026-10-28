@@ -80,7 +80,7 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string, data ...any)
 			return common.Plan{}, fmt.Errorf("files: %w", err)
 		}
 		if len(data) > 0 && data[0] != nil && strings.HasSuffix(source, ".tmpl") && !isBinary(content) {
-			tmpl, err := template.New(source).Parse(string(content))
+			tmpl, err := template.New(source).Option("missingkey=error").Parse(string(content))
 			if err != nil {
 				return common.Plan{}, fmt.Errorf("interpretar template %s: %w", source, err)
 			}

@@ -34,11 +34,11 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py", "src/config/config.py"},
-		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py", "src/app/config/config.py"},
-		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py", "src/app/config/config.py"},
-		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py", "src/app/config/config.py"},
-		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/resource_controller.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/interface_adapters/presenters/resource_presenter.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/persistence/resource_repository.py", "src/app/domain/model/resource.py", "src/app/config/config.py"},
+		"flat":       {"setup.py", "src/user_controller.py", "src/user_service.py", "src/user_model.py", "src/main.py", "src/config/config.py"},
+		"layered":    {"src/app/main.py", "src/app/controllers/user_controller.py", "src/app/services/user_service.py", "src/app/models/user.py", "src/app/config/config.py"},
+		"modular":    {"src/app/main.py", "src/app/user/controller.py", "src/app/user/service.py", "src/app/user/models.py", "src/app/config/config.py"},
+		"hexagonal":  {"src/app/main.py", "src/app/routers/user_controller.py", "src/app/application/user_service.py", "src/app/ports/user_repository.py", "src/app/infrastructure/user_repository.py", "src/app/domain/user.py", "src/app/config/config.py"},
+		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/user_controller.py", "src/app/interface_adapters/controllers/user_controller.py", "src/app/interface_adapters/presenters/user_presenter.py", "src/app/application/use_cases/create_user.py", "src/app/application/use_cases/list_user.py", "src/app/application/port/outbound/user_repository.py", "src/app/interface_adapters/persistence/user_repository.py", "src/app/domain/model/user.py", "src/app/config/config.py"},
 	},
 }
 
@@ -52,9 +52,9 @@ var forbiddenFiles = map[string]map[string][]string{
 		"clean_arch": {"routes", "pkg/validator", "migrations"},
 	},
 	"python": {
-		"flat":       {"src/repository.py", "src/resource_repository.py"},
-		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/resource_repository.py", "src/app/router", "src/app/controllers/api.py"},
-		"modular":    {"src/app/resource/repository.py", "src/app/shared/api.py"},
+		"flat":       {"src/repository.py", "src/user_repository.py"},
+		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/user_repository.py", "src/app/router", "src/app/controllers/api.py"},
+		"modular":    {"src/app/user/repository.py", "src/app/shared/api.py"},
 		"hexagonal":  {"src/app/routers/api.py"},
 		"clean_arch": {"src/app/frameworks_and_drivers/web/api.py"},
 	},
@@ -63,11 +63,11 @@ var forbiddenFiles = map[string]map[string][]string{
 // Trechos de código que comprovam que o scaffold genérico foi gerado.
 var codeChecks = map[string]map[string][2]string{
 	"python": {
-		"flat":       {"src/resource_model.py", "class Resource"},
-		"layered":    {"src/app/services/resource_service.py", "def list_all"},
-		"modular":    {"src/app/resource/service.py", "def list_all"},
-		"hexagonal":  {"src/app/application/resource_service.py", "class ResourceService"},
-		"clean_arch": {"src/app/application/use_cases/create_resource.py", "class CreateResource"},
+		"flat":       {"src/user_model.py", "class User"},
+		"layered":    {"src/app/services/user_service.py", "def list_all"},
+		"modular":    {"src/app/user/service.py", "def list_all"},
+		"hexagonal":  {"src/app/application/user_service.py", "class UserService"},
+		"clean_arch": {"src/app/application/use_cases/create_user.py", "class CreateUser"},
 	},
 }
 
@@ -195,7 +195,7 @@ func TestGenerateRefusesExistingDirectory(t *testing.T) {
 	}
 }
 
-func TestPythonGenericResourceDispatchers(t *testing.T) {
+func TestPythonGenericUserDispatchers(t *testing.T) {
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		t.Skip("python3 is not installed")
@@ -235,20 +235,20 @@ class MockHandler:
     def end_headers(self):
         pass
 
-assert "resource" in ROUTES, "resource route missing"
+assert "user" in ROUTES, "user route missing"
 handler = MockHandler()
-ROUTES["resource"](handler, "GET", [])
+ROUTES["user"](handler, "GET", [])
 assert handler.status == 501, f"expected 501, got {handler.status}"
 
 handler = MockHandler()
-ROUTES["resource"](handler, "GET", ["1"])
+ROUTES["user"](handler, "GET", ["1"])
 assert handler.status == 501, f"expected 501, got {handler.status}"
 `
 			command := exec.Command(python, "-c", script)
 			command.Dir = destination
 			command.Env = append(os.Environ(), "PYTHONPATH="+destination)
 			if output, err := command.CombinedOutput(); err != nil {
-				t.Fatalf("generated generic resource failed: %v\n%s", err, output)
+				t.Fatalf("generated generic user failed: %v\n%s", err, output)
 			}
 		})
 	}
@@ -491,23 +491,23 @@ func TestPythonSQLAlchemyGeneration(t *testing.T) {
 			}
 
 			// 3. Checar se o model contém Column e herda de Base
-			modelRel := "src/resource_model.py"
+			modelRel := "src/user_model.py"
 			switch arch {
 			case "layered":
-				modelRel = "src/app/models/resource.py"
+				modelRel = "src/app/models/user.py"
 			case "modular":
-				modelRel = "src/app/resource/models.py"
+				modelRel = "src/app/user/models.py"
 			case "hexagonal":
-				modelRel = "src/app/domain/resource.py"
+				modelRel = "src/app/domain/user.py"
 			case "clean_arch":
-				modelRel = "src/app/domain/model/resource.py"
+				modelRel = "src/app/domain/model/user.py"
 			}
 			modelBytes, err := os.ReadFile(filepath.Join(destination, modelRel))
 			if err != nil {
 				t.Fatalf("read model file %s: %v", modelRel, err)
 			}
 			modelText := string(modelBytes)
-			if !strings.Contains(modelText, "class Resource(Base):") || !strings.Contains(modelText, "Column(String, primary_key=True") {
+			if !strings.Contains(modelText, "class User(Base):") || !strings.Contains(modelText, "Column(String, primary_key=True") {
 				t.Errorf("%s does not contain SQLAlchemy model definition:\n%s", modelRel, modelText)
 			}
 		})

@@ -1,4 +1,4 @@
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
 from {{.Modules.model}} import {{.Class}}
 
 

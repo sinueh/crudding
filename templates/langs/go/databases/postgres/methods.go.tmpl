@@ -1,0 +1,31 @@
+type PostgresConfig struct {
+	URL string
+}
+
+func loadPostgresConfig() PostgresConfig {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			getEnv("DB_HOST", "localhost"),
+			getEnv("DB_PORT", "5432"),
+			getEnv("DB_USER", "postgres"),
+			getEnv("DB_PASSWORD", "postgres"),
+			getEnv("DB_NAME", "app"),
+		)
+	}
+	return PostgresConfig{URL: dsn}
+}
+
+// ConnectPostgres estabelece e valida a conexão com o PostgreSQL.
+func ConnectPostgres(cfg PostgresConfig) (*sql.DB, error) {
+	db, err := sql.Open("postgres", cfg.URL)
+	if err != nil {
+		return nil, fmt.Errorf("abrir conexão com postgres: %w", err)
+	}
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("ping no postgres: %w", err)
+	}
+	return db, nil
+}
+

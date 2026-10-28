@@ -1,0 +1,37 @@
+type MongoConfig struct {
+	URI    string
+	DBName string
+}
+
+func loadMongoConfig() MongoConfig {
+	uri := os.Getenv("MONGODB_URI")
+	if uri == "" {
+		uri = fmt.Sprintf(
+			"mongodb://%s:%s@%s:%s/%s?authSource=admin",
+			getEnv("DB_USER", "root"),
+			getEnv("DB_PASSWORD", "rootpassword"),
+			getEnv("DB_HOST", "localhost"),
+			getEnv("DB_PORT", "27017"),
+			getEnv("DB_NAME", "app"),
+		)
+	}
+	return MongoConfig{
+		URI:    uri,
+		DBName: getEnv("DB_NAME", "app"),
+	}
+}
+
+// ConnectMongo estabelece e valida a conexão com o MongoDB.
+func ConnectMongo(ctx context.Context, cfg MongoConfig) (*mongo.Client, error) {
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI))
+	if err != nil {
+		return nil, fmt.Errorf("abrir conexão com mongo: %w", err)
+	}
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := client.Ping(pingCtx, nil); err != nil {
+		return nil, fmt.Errorf("ping no mongo: %w", err)
+	}
+	return client, nil
+}
+

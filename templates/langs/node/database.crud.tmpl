@@ -1,0 +1,8 @@
+{
+  "files": [
+    { "from": "langs/node/databases/{{.Database}}/db.{{.Runtime}}.tmpl", "to": "src/database.{{.Runtime}}" }
+  ],
+  "merge": [
+    { "into": "package.json", "from": "langs/node/databases/{{.Database}}/package.json.tmpl" }
+  ]
+}

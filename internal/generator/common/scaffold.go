@@ -67,40 +67,22 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 	return manifest.Write(root, m)
 }
 
-// BaseData reúne os campos de template comuns a todas as linguagens. Deve ser
-// embutido nos templateData específicos para que {{.ProjectName}} etc.
-// continuem acessíveis diretamente.
-type BaseData struct {
-	ProjectName  string
-	ProjectSlug  string
-	Framework    string
-	Architecture string
-	Database     string
-	ORM          string
-}
-
-func NewBaseData(config project.Config) BaseData {
-	return BaseData{
-		ProjectName:  config.ProjectName,
-		ProjectSlug:  project.Slug(config.ProjectName),
-		Framework:    config.Framework,
-		Architecture: config.Architecture,
-		Database:     config.Database,
-		ORM:          config.ORM,
+// TemplateData devolve os dados comuns a todos os templates. Os valores de
+// cada arquitetura (nome do endpoint de exemplo, módulos, entry point...) vêm
+// do campo vars do project.crud e são acrescentados por quem renderiza.
+func TemplateData(config project.Config) map[string]any {
+	orm := config.ORM
+	if orm == "none" || orm == "nenhum" {
+		orm = ""
 	}
-}
-
-func (b BaseData) HasDatabase(name string) bool {
-	return b.Database == name
-}
-
-func (b BaseData) HasAnyDatabase() bool {
-	return b.Database != ""
-}
-
-func (b BaseData) HasORM(name ...string) bool {
-	if len(name) == 0 {
-		return b.ORM != "" && b.ORM != "none" && b.ORM != "nenhum"
+	return map[string]any{
+		"ProjectName":  config.ProjectName,
+		"ProjectSlug":  project.Slug(config.ProjectName),
+		"Language":     config.Language,
+		"Runtime":      config.Runtime,
+		"Framework":    config.Framework,
+		"Architecture": config.Architecture,
+		"Database":     config.Database,
+		"ORM":          orm,
 	}
-	return b.ORM == name[0]
 }

@@ -35,7 +35,7 @@ func WriteFiles(root string, templates fs.FS, data any, files []File) error {
 		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 			return fmt.Errorf("criar diretório para %s: %w", file.OutputPath, err)
 		}
-		content, err := render(templates, file.TemplatePath, data)
+		content, err := Render(templates, file.TemplatePath, data)
 		if err != nil {
 			return err
 		}
@@ -46,8 +46,10 @@ func WriteFiles(root string, templates fs.FS, data any, files []File) error {
 	return nil
 }
 
-func render(templates fs.FS, templatePath string, data any) ([]byte, error) {
-	parsed, err := template.ParseFS(templates, templatePath)
+// Render renderiza o template templatePath de templates com data. Uma chave
+// ausente em data é erro, para um vars esquecido não virar "<no value>".
+func Render(templates fs.FS, templatePath string, data any) ([]byte, error) {
+	parsed, err := template.New(path.Base(templatePath)).Option("missingkey=error").ParseFS(templates, templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("ler template %s: %w", templatePath, err)
 	}

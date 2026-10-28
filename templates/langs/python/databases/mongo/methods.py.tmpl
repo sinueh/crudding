@@ -1,0 +1,16 @@
+
+
+def get_mongo_database():
+    """Retorna a instância do banco de dados MongoDB configurado."""
+    uri = os.getenv(
+        "MONGODB_URI",
+        f"mongodb://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', 'rootpassword')}@"
+        f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '27017')}/"
+        f"{os.getenv('DB_NAME', 'app')}?authSource=admin",
+    )
+    client = MongoClient(uri)
+    db_name = os.getenv("DB_NAME", "app")
+    return client[db_name]
+
+
+get_database = get_mongo_database

@@ -6,7 +6,7 @@ class Create{{.Class}}:
         self.repository = repository
 
     def execute(self, data: dict) -> {{.Class}}:
-{{- if .HasORM "sqlalchemy" }}
+{{- if eq .ORM "sqlalchemy" }}
         item = {{.Class}}(id=data.get("id"))
         return self.repository.save(item)
 {{- else }}

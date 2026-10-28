@@ -1,0 +1,10 @@
+{
+  "inserts": [
+    { "marker": "# crudding:db-imports", "unique": true, "from": "langs/python/databases/{{.Database}}/imports.py.tmpl" },
+    { "marker": "# crudding:db-config", "from": "langs/python/databases/{{.Database}}/config.py.tmpl" },
+    { "marker": "# crudding:db-methods", "from": "langs/python/databases/{{.Database}}/methods.py.tmpl" }
+  ],
+  "append": [
+    { "into": "requirements.txt", "from": "langs/python/databases/{{.Database}}/requirements.txt.tmpl" }
+  ]
+}

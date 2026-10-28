@@ -38,6 +38,9 @@ type Manifest struct {
 	Database  string       `json:"database,omitempty"`
 	Databases []string     `json:"databases,omitempty"`
 	ORM       string       `json:"orm,omitempty"`
+	// Vars são os dados próprios da arquitetura usados ao renderizar os
+	// templates (ex.: {{.Class}}). Só existem no project.crud.tmpl.
+	Vars map[string]any `json:"vars,omitempty"`
 	// Template é o name do projeto-template que gerou este projeto.
 	Template string `json:"template,omitempty"`
 	// Ignore, Directories e Files descrevem a estrutura do projeto, usada por
