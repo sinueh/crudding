@@ -794,17 +794,42 @@ func TestCLIInit(t *testing.T) {
 }
 
 func TestCLITemplate(t *testing.T) {
+	t.Setenv("CRUDDING_TEMPLATES_DIR", t.TempDir())
 	templateDir := copyExampleTemplate(t)
 	writeFile(t, templateDir, "NOTAS.md", "criado depois do init\n")
 	tmp := t.TempDir()
 	chdirTemp(t, tmp)
 
 	var stdout, stderr bytes.Buffer
-	args := []string{"template", templateDir, "n:minha-api"}
+	// Salva o template
+	args := []string{"template", templateDir, "n:meu-template"}
 	if code := cli.Run(args, &stdout, &stderr); code != 0 {
 		t.Fatalf("Run(%v) exit code = %d, stderr = %q", args, code, stderr.String())
 	}
-	for _, snippet := range []string{"Aviso: 1 arquivo", "NOTAS.md", "Projeto gerado em", "Template: go-template"} {
+	for _, snippet := range []string{"Aviso: 1 arquivo", "NOTAS.md", "Template meu-template salvo com sucesso", "crudding template list"} {
+		if !strings.Contains(stdout.String(), snippet) {
+			t.Errorf("stdout não contém %q:\n%s", snippet, stdout.String())
+		}
+	}
+
+	// Lista os templates salvos
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"template", "list"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template list) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "meu-template") {
+		t.Errorf("stdout de template list não contém meu-template:\n%s", stdout.String())
+	}
+
+	// Gera projeto a partir do template salvo
+	stdout.Reset()
+	stderr.Reset()
+	argsUse := []string{"template", "use", "meu-template", "n:minha-api"}
+	if code := cli.Run(argsUse, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(%v) exit code = %d, stderr = %q", argsUse, code, stderr.String())
+	}
+	for _, snippet := range []string{"Projeto gerado em", "Template: meu-template"} {
 		if !strings.Contains(stdout.String(), snippet) {
 			t.Errorf("stdout não contém %q:\n%s", snippet, stdout.String())
 		}
@@ -817,9 +842,11 @@ func TestCLITemplate(t *testing.T) {
 		want string
 	}{
 		{[]string{"template"}, "nenhuma pasta de template"},
-		{[]string{"template", filepath.Join(tmp, "nao-existe"), "outro"}, manifest.FileName},
+		{[]string{"template", filepath.Join(tmp, "nao-existe"), "outro"}, "não encontrado"},
 		{[]string{"template", templateDir, "a/b"}, "nome inválido"},
 		{[]string{"template", templateDir, "outro", "extra"}, "argumentos inesperados"},
+		{[]string{"template", "use"}, "nenhum template informado"},
+		{[]string{"template", "use", "nao-existe"}, "não encontrado"},
 	} {
 		stdout.Reset()
 		stderr.Reset()
@@ -832,5 +859,10 @@ func TestCLITemplate(t *testing.T) {
 	stdout.Reset()
 	if code := cli.Run([]string{"template", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template <pasta>") {
 		t.Errorf("Run(template -h) = %d, stdout = %q", code, stdout.String())
+	}
+
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "list", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template list") {
+		t.Errorf("Run(template list -h) = %d, stdout = %q", code, stdout.String())
 	}
 }

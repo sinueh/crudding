@@ -273,3 +273,60 @@ func TestCustomUnlisted(t *testing.T) {
 		t.Errorf("Unlisted() = %v", unlisted)
 	}
 }
+
+func TestCustomStorage(t *testing.T) {
+	tempTemplatesDir := t.TempDir()
+	t.Setenv("CRUDDING_TEMPLATES_DIR", tempTemplatesDir)
+
+	// EnsureTemplatesDir
+	dir, err := custom.EnsureTemplatesDir()
+	if err != nil || dir != tempTemplatesDir {
+		t.Fatalf("EnsureTemplatesDir() = %q, want %q, err = %v", dir, tempTemplatesDir, err)
+	}
+
+	// Criar um projeto de teste
+	srcDir := t.TempDir()
+	writeFile(t, srcDir, "main.go", "package main\n")
+	writeFile(t, srcDir, "README.md", "# Test Project\n")
+
+	// Save
+	savedDir, m, err := custom.Save(srcDir, "test-tmpl")
+	if err != nil {
+		t.Fatalf("Save() err = %v", err)
+	}
+	if m.Name != "test-tmpl" {
+		t.Errorf("Manifest.Name = %q, want \"test-tmpl\"", m.Name)
+	}
+	if _, err := os.Stat(filepath.Join(savedDir, "main.go")); err != nil {
+		t.Errorf("main.go não copiado para o template: %v", err)
+	}
+
+	// List
+	list, err := custom.List()
+	if err != nil || len(list) != 1 {
+		t.Fatalf("List() = %v, err = %v", list, err)
+	}
+	if list[0].Name != "test-tmpl" {
+		t.Errorf("list[0].Name = %q, want \"test-tmpl\"", list[0].Name)
+	}
+
+	// Get
+	getPath, getM, err := custom.Get("test-tmpl")
+	if err != nil || getPath != savedDir || getM.Name != "test-tmpl" {
+		t.Errorf("Get(test-tmpl) = %q, %+v, %v", getPath, getM, err)
+	}
+
+	// Duplicate save fails
+	if _, _, err := custom.Save(srcDir, "test-tmpl"); err == nil {
+		t.Errorf("Save repetido deveria falhar")
+	}
+
+	// Remove
+	if err := custom.Remove("test-tmpl"); err != nil {
+		t.Fatalf("Remove() err = %v", err)
+	}
+	listAfter, err := custom.List()
+	if err != nil || len(listAfter) != 0 {
+		t.Errorf("List() após remove = %v, err = %v", listAfter, err)
+	}
+}

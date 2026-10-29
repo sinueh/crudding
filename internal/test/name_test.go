@@ -40,3 +40,31 @@ func TestReadEndpointName(t *testing.T) {
 		}
 	}
 }
+
+func TestReadProjectPathAndTemplateName(t *testing.T) {
+	// ReadProjectPath
+	path, err := project.ReadProjectPath(strings.NewReader("\n"), &bytes.Buffer{})
+	if err != nil || path != "." {
+		t.Errorf("ReadProjectPath(vazio) = %q, want \".\"", path)
+	}
+	path, err = project.ReadProjectPath(strings.NewReader("meu/caminho\n"), &bytes.Buffer{})
+	if err != nil || path != "meu/caminho" {
+		t.Errorf("ReadProjectPath = %q, want \"meu/caminho\"", path)
+	}
+
+	// ReadTemplateName
+	name, err := project.ReadTemplateName(strings.NewReader("\n"), &bytes.Buffer{}, "default-name")
+	if err != nil || name != "default-name" {
+		t.Errorf("ReadTemplateName(vazio com default) = %q, want \"default-name\"", name)
+	}
+	name, err = project.ReadTemplateName(strings.NewReader("custom-name\n"), &bytes.Buffer{}, "default-name")
+	if err != nil || name != "custom-name" {
+		t.Errorf("ReadTemplateName = %q, want \"custom-name\"", name)
+	}
+	if _, err := project.ReadTemplateName(strings.NewReader("\n"), &bytes.Buffer{}, ""); err == nil {
+		t.Errorf("ReadTemplateName(vazio sem default) should fail")
+	}
+	if _, err := project.ReadTemplateName(strings.NewReader("bad/name\n"), &bytes.Buffer{}, "default"); err == nil {
+		t.Errorf("ReadTemplateName(bad/name) should fail")
+	}
+}

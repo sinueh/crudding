@@ -41,8 +41,18 @@ var commands = []Command{
 		Run:     runInit,
 	},
 	{
+		Args:    "template list",
+		Summary: "lista todos os templates salvos em .crudding/templates",
+		Run:     runTemplateList,
+	},
+	{
+		Args:    "template use",
+		Summary: "gera um novo projeto a partir de um template salvo (crudding template use <template> [nome])",
+		Run:     runTemplateUse,
+	},
+	{
 		Args:    "template",
-		Summary: "gera um novo projeto a partir de um projeto-template (crudding template <pasta> [nome])",
+		Summary: "salva um projeto como template em .crudding/templates (crudding template <pasta> [nome])",
 		Run:     runTemplate,
 	},
 	{
