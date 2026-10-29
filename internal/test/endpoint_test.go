@@ -77,10 +77,10 @@ func TestEndpointRoundTripAllCombinations(t *testing.T) {
 		}
 		t.Run(config.Language+"/"+config.Framework+"/"+config.Architecture, func(t *testing.T) {
 			root, m := generateProject(t, config)
-			if !m.Endpoint.Defined() || !slices.Contains(m.Endpoints, m.Endpoint.Name) {
-				t.Fatalf("campo endpoint não preenchido na geração: %+v", m.Endpoint)
+			if !m.TemplateEndpoint.Defined() || !slices.Contains(m.Endpoints, m.TemplateEndpoint.Name) {
+				t.Fatalf("campo template_endpoint não preenchido na geração: %+v", m.TemplateEndpoint)
 			}
-			assertFilesExist(t, root, append(slices.Clone(m.Endpoint.Files), m.Endpoint.Register...)...)
+			assertFilesExist(t, root, append(slices.Clone(m.TemplateEndpoint.Files), m.TemplateEndpoint.Register...)...)
 			initial := readTree(t, root)
 
 			for _, name := range []string{"order_item", "invoice"} {
@@ -88,15 +88,15 @@ func TestEndpointRoundTripAllCombinations(t *testing.T) {
 				if err != nil {
 					t.Fatalf("AddEndpoint(%s) error = %v", name, err)
 				}
-				if len(result.Created) != len(m.Endpoint.Files) || !slices.Equal(result.Modified, m.Endpoint.Register) {
+				if len(result.Created) != len(m.TemplateEndpoint.Files) || !slices.Equal(result.Modified, m.TemplateEndpoint.Register) {
 					t.Fatalf("AddEndpoint(%s) = %+v", name, result)
 				}
-				for _, register := range m.Endpoint.Register {
+				for _, register := range m.TemplateEndpoint.Register {
 					assertFileContains(t, root, register, name)
 				}
 			}
 			after := assertStructureInSync(t, root)
-			if !slices.Equal(after.Endpoints, []string{m.Endpoint.Name, "order_item", "invoice"}) {
+			if !slices.Equal(after.Endpoints, []string{m.TemplateEndpoint.Name, "order_item", "invoice"}) {
 				t.Errorf("Endpoints = %v", after.Endpoints)
 			}
 
@@ -181,7 +181,7 @@ func TestAddEndpointRejections(t *testing.T) {
 		{pythonRoot, pythonManifest, "class", "palavra reservada"},
 		{goRoot, goManifest, "func", "palavra reservada"},
 		{pythonRoot, pythonManifest, "user", "endpoint de exemplo"},
-		{nodeRoot, nodeManifest, "invoice", `campo "endpoint"`},
+		{nodeRoot, nodeManifest, "invoice", `campo "template_endpoint"`},
 	} {
 		if _, err := generator.AddEndpoint(testCase.root, testCase.m, testCase.name); err == nil || !strings.Contains(err.Error(), testCase.want) {
 			t.Errorf("AddEndpoint(%s, %s) err = %v, want contendo %q", testCase.m.Language, testCase.name, err, testCase.want)
@@ -207,7 +207,7 @@ func TestAddEndpointRejections(t *testing.T) {
 	}{
 		{pythonRoot, pythonManifest, "nonexistent", "não encontrado"},
 		{pythonRoot, pythonManifest, "user", "endpoint de exemplo"},
-		{nodeRoot, nodeManifest, "invoice", `campo "endpoint"`},
+		{nodeRoot, nodeManifest, "invoice", `campo "template_endpoint"`},
 	} {
 		if _, err := generator.RemoveEndpoint(testCase.root, testCase.m, testCase.name); err == nil || !strings.Contains(err.Error(), testCase.want) {
 			t.Errorf("RemoveEndpoint(%s, %s) err = %v, want contendo %q", testCase.m.Language, testCase.name, err, testCase.want)

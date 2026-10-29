@@ -62,7 +62,7 @@ crudding/
 │   │   │   └── remove.go        # Remoção de endpoint (RemovalPlan): exclusão de arquivos, limpeza de linhas e diretórios vazios
 │   │   ├── custom/
 │   │   │   ├── init.go          # Init: grava/atualiza directories e files no project.crud
-│   │   │   ├── endpoint.go      # add/remove endpoint a partir do campo "endpoint" (endpoint de exemplo)
+│   │   │   ├── endpoint.go      # add/remove endpoint a partir do campo "template_endpoint" (endpoint de exemplo)
 │   │   │   └── template.go      # Plan de "crudding template": cópia com troca de nome; Unlisted
 │   │   ├── langs/
 │   │   │   ├── golang/
@@ -118,7 +118,7 @@ crudding/
 ### `crudding add endpoint`
 
 1. `manifest.Find` procura o `project.crud` a partir do diretório atual, subindo pelos pais.
-2. `generator.CheckEndpointSupport` confirma que o campo `endpoint` do manifesto está preenchido e válido. Não há código por linguagem ou arquitetura para criar endpoints: tudo sai desse campo (ver "Campo `endpoint`" abaixo).
+2. `generator.CheckEndpointSupport` confirma que o campo `template_endpoint` do manifesto está preenchido e válido. Não há código por linguagem ou arquitetura para criar endpoints: tudo sai desse campo (ver "Campo `template_endpoint`" abaixo).
 3. `project.ReadEndpointName` lê o nome (snake_case).
 4. `custom.EndpointPatch` monta um `common.Patch` copiando o endpoint de exemplo (`Raw`) e duplicando as linhas dele nos arquivos de `register` (`Rewrites`).
 5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, todo arquivo de `register` menciona o exemplo) e desfaz as alterações se a gravação falhar.
@@ -126,7 +126,7 @@ crudding/
 ### `crudding remove endpoint`
 
 1. `manifest.Find` localiza a raiz do projeto e lê o `project.crud`.
-2. `generator.CheckEndpointSupport` confirma que o campo `endpoint` está preenchido.
+2. `generator.CheckEndpointSupport` confirma que o campo `template_endpoint` está preenchido.
 3. `project.ReadEndpointName` lê o nome (ou via argumentos `name:<nome>`, `n:<nome>` ou posicional).
 4. Verifica se o endpoint está registrado no `project.crud`.
 5. `custom.EndpointRemovalPlan` monta um `common.RemovalPlan`: as cópias a deletar, as pastas que devem ser excluídas se ficarem vazias e as linhas duplicadas nos arquivos de `register`.
@@ -144,7 +144,7 @@ crudding/
 4. `common.Apply` valida a ausência de conflitos e grava os arquivos.
 5. Atualiza dependências (`go.mod`, `requirements.txt` ou `package.json`) com os drivers do banco e atualiza o manifesto `project.crud` com o banco adicionado.
 
-**Para uma linguagem ou arquitetura ter `add endpoint`**: o `Plan` do gerador deve gerar um endpoint de exemplo e preencher `common.Plan.Endpoint` (`name`, `files`, `register`), como fazem `langs/golang/generate.go` (`user`) e `langs/python/sample.go` (`resource`). O exemplo precisa de três coisas:
+**Para uma linguagem ou arquitetura ter `add endpoint`**: o `Plan` do gerador deve gerar um endpoint de exemplo e preencher `common.Plan.TemplateEndpoint` (`name`, `files`, `register`), como fazem `langs/golang/generate.go` (`user`) e `langs/python/sample.go` (`resource`). O exemplo precisa de três coisas:
 - todo arquivo dele tem o nome do exemplo no caminho;
 - o registro (rotas, imports, injeção de dependência) fica em linhas únicas que mencionam o exemplo, nos arquivos de `register`;
 - nenhuma declaração de várias linhas do exemplo fica num arquivo compartilhado (por isso, no Go hexagonal/clean_arch, os DTOs e ports ficam em `user_types.go`, `user_repository.go` e `user_service.go`).
@@ -158,9 +158,9 @@ Caminho paralelo ao registry: qualquer projeto vira template, e a estrutura fica
 1. `custom.Init` grava (ou atualiza) o `project.crud` do diretório atual. Num manifesto novo: `name` = nome da pasta, `architecture: "custom"` e `ignore` vazio (nada é preenchido automaticamente, nem a partir do `.gitignore`). Em seguida chama `common.ListStructure`, que aplica o `ignore` e sempre pula `project.crud` e `.git`, e grava `directories` e `files`. Rodar de novo só regenera essas duas listas.
 2. `crudding template` lê o manifesto com `manifest.ReadFS`, avisa sobre arquivos fora de `files` (`custom.Unlisted`) e chama `generator.GenerateFromTemplate`.
 3. `custom.Plan` lê e valida tudo antes de gravar e troca o `name` do template pelo nome novo (exata, slug e snake_case) nos caminhos e no conteúdo de texto. O `Prepare` grava as pastas e os arquivos (só o bit de execução é preservado). `Plan.Manifest` faz o `common.Scaffold` gravar o manifesto herdado do template, com `name`, `template` e os caminhos trocados.
-4. `add db` recusa `architecture: "custom"` (`AddDatabase`). `add/remove endpoint` dependem só do campo `endpoint`, como em qualquer projeto.
+4. `add db` recusa `architecture: "custom"` (`AddDatabase`). `add/remove endpoint` dependem só do campo `template_endpoint`, como em qualquer projeto.
 
-### Campo `endpoint` (endpoints personalizados)
+### Campo `template_endpoint` (endpoints personalizados)
 
 É o único mecanismo de `add/remove endpoint` (`generator.AddEndpoint`/`RemoveEndpoint` chamam `custom.EndpointPatch`/`custom.EndpointRemovalPlan`). Os projetos gerados já trazem o campo apontando para o endpoint de exemplo.
 

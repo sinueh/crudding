@@ -19,9 +19,9 @@ type Plan struct {
 	// Prepare roda depois da criação do diretório raiz e antes da escrita dos
 	// arquivos (ex.: criar pacotes Python com __init__.py). Opcional.
 	Prepare func(root string) error
-	// Endpoint preenche o campo endpoint do project.crud: o endpoint de
+	// TemplateEndpoint preenche o campo template_endpoint do project.crud: o endpoint de
 	// exemplo gerado, que o "crudding add endpoint" copia.
-	Endpoint manifest.EndpointSpec
+	TemplateEndpoint manifest.EndpointSpec
 	// Manifest, se definido, é gravado no lugar do manifesto montado a partir
 	// do config (ex.: projetos gerados de um template herdam o dele).
 	Manifest *manifest.Manifest
@@ -57,7 +57,7 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 
 	// O manifesto é gravado por último para listar a estrutura gerada.
 	m := manifest.New(config, plan.Endpoints...)
-	m.Endpoint = plan.Endpoint
+	m.TemplateEndpoint = plan.TemplateEndpoint
 	if plan.Manifest != nil {
 		m = *plan.Manifest
 	}

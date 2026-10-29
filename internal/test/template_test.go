@@ -32,7 +32,7 @@ func copyExampleTemplate(t *testing.T) string {
 	}
 	m.Language = "go"
 	m.Endpoints = []string{"item"}
-	m.Endpoint = manifest.EndpointSpec{
+	m.TemplateEndpoint = manifest.EndpointSpec{
 		Name:     "item",
 		Files:    []string{"internal/item/handler.go"},
 		Register: []string{"cmd/api/main.go"},
@@ -142,7 +142,7 @@ func TestTemplateRejectsInvalidTemplates(t *testing.T) {
 	}
 }
 
-// Sem o campo endpoint preenchido não há como criar endpoints; add db não
+// Sem o campo template_endpoint preenchido não há como criar endpoints; add db não
 // depende do campo e recusa a arquitetura custom.
 func TestCustomArchitectureCommandsUnsupported(t *testing.T) {
 	root := newTemplateDir(t, "app", map[string]string{"main.go": "package main\n"})
@@ -150,13 +150,13 @@ func TestCustomArchitectureCommandsUnsupported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := generator.CheckEndpointSupport(m); err == nil || !strings.Contains(err.Error(), `campo "endpoint"`) {
+	if err := generator.CheckEndpointSupport(m); err == nil || !strings.Contains(err.Error(), `campo "template_endpoint"`) {
 		t.Errorf("CheckEndpointSupport() err = %v", err)
 	}
-	if _, err := generator.AddEndpoint(root, m, "invoice"); err == nil || !strings.Contains(err.Error(), `campo "endpoint"`) {
+	if _, err := generator.AddEndpoint(root, m, "invoice"); err == nil || !strings.Contains(err.Error(), `campo "template_endpoint"`) {
 		t.Errorf("AddEndpoint() err = %v", err)
 	}
-	if _, err := generator.RemoveEndpoint(root, m, "invoice"); err == nil || !strings.Contains(err.Error(), `campo "endpoint"`) {
+	if _, err := generator.RemoveEndpoint(root, m, "invoice"); err == nil || !strings.Contains(err.Error(), `campo "template_endpoint"`) {
 		t.Errorf("RemoveEndpoint() err = %v", err)
 	}
 	if _, err := generator.AddDatabase(root, m, "postgres", templates); err == nil || !strings.Contains(err.Error(), "não é suportado para a linguagem") {

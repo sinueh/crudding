@@ -134,17 +134,17 @@ func TestCustomEndpointRejectsInvalidSpecs(t *testing.T) {
 	}{
 		{"name inválido", manifest.EndpointSpec{Name: "Item", Files: []string{"internal/item/handler.go"}}, "invoice", "name"},
 		{"sem files", manifest.EndpointSpec{Name: "item", Register: []string{"cmd/api/main.go"}}, "invoice", "files"},
-		{"o próprio exemplo", base.Endpoint, "item", "endpoint de exemplo"},
+		{"o próprio exemplo", base.TemplateEndpoint, "item", "endpoint de exemplo"},
 		{"arquivo sem o nome", manifest.EndpointSpec{Name: "item", Files: []string{"go.mod"}}, "invoice", "mesmo caminho"},
 		{"arquivo inexistente", manifest.EndpointSpec{Name: "item", Files: []string{"internal/item/nada.go"}}, "invoice", "nada.go"},
 		{"fora do projeto", manifest.EndpointSpec{Name: "item", Files: []string{"../item.go"}}, "invoice", "inválido"},
 		{"register sem o exemplo", manifest.EndpointSpec{Name: "item", Files: []string{"internal/item/handler.go"}, Register: []string{"go.mod"}}, "invoice", "nenhuma linha"},
-		{"nome novo inválido", base.Endpoint, "../x", "inválido"},
+		{"nome novo inválido", base.TemplateEndpoint, "../x", "inválido"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			m := base
-			m.Endpoint = testCase.spec
+			m.TemplateEndpoint = testCase.spec
 			if _, err := generator.AddEndpoint(root, m, testCase.add); err == nil || !strings.Contains(err.Error(), testCase.want) {
 				t.Errorf("AddEndpoint() err = %v, want contendo %q", err, testCase.want)
 			}
@@ -161,11 +161,11 @@ func TestCustomEndpointRejectsInvalidSpecs(t *testing.T) {
 	assertFilesExist(t, root, "internal/item/handler.go")
 }
 
-// O campo endpoint preenchido vale também em projetos de arquitetura embutida,
+// O campo template_endpoint preenchido vale também em projetos de arquitetura embutida,
 // no lugar do layout da arquitetura.
 func TestCustomEndpointOverridesBuiltinLayout(t *testing.T) {
 	root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "go", Framework: "gin", Architecture: "layered"})
-	m.Endpoint = manifest.EndpointSpec{
+	m.TemplateEndpoint = manifest.EndpointSpec{
 		Name:     "user",
 		Files:    []string{"internal/handlers/user.go", "internal/service/user.go"},
 		Register: []string{"internal/routes/routes.go"},

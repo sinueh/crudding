@@ -29,21 +29,21 @@ var reservedNames = map[string][]string{
 	},
 }
 
-// CheckEndpoint valida o campo endpoint do manifesto sem olhar o disco, para a
+// CheckEndpoint valida o campo template_endpoint do manifesto sem olhar o disco, para a
 // CLI falhar antes de pedir o nome do endpoint.
 func CheckEndpoint(m manifest.Manifest) error {
-	spec := m.Endpoint
+	spec := m.TemplateEndpoint
 	if err := project.ValidateEndpointName(spec.Name); err != nil {
-		return fmt.Errorf("campo endpoint do %s: name: %w", manifest.FileName, err)
+		return fmt.Errorf("campo template_endpoint do %s: name: %w", manifest.FileName, err)
 	}
 	if len(spec.Files) == 0 {
-		return fmt.Errorf("campo endpoint do %s: liste em files os arquivos do endpoint de exemplo %s", manifest.FileName, spec.Name)
+		return fmt.Errorf("campo template_endpoint do %s: liste em files os arquivos do endpoint de exemplo %s", manifest.FileName, spec.Name)
 	}
 	return nil
 }
 
 // EndpointPatch monta o Patch de "crudding add endpoint name" a partir do
-// campo endpoint de m: copia os arquivos do exemplo trocando o nome nos
+// campo template_endpoint de m: copia os arquivos do exemplo trocando o nome nos
 // caminhos e no conteúdo e, em cada arquivo de register, duplica as linhas que
 // mencionam o exemplo.
 func EndpointPatch(root string, m manifest.Manifest, name string) (common.Patch, error) {
@@ -145,9 +145,9 @@ func newEndpointRecipe(m manifest.Manifest, name string) (endpointRecipe, error)
 	if slices.Contains(reservedNames[m.Language], name) {
 		return endpointRecipe{}, fmt.Errorf("%q é uma palavra reservada em %s", name, m.Language)
 	}
-	spec := m.Endpoint
+	spec := m.TemplateEndpoint
 	if name == spec.Name {
-		return endpointRecipe{}, fmt.Errorf("%q é o endpoint de exemplo do campo endpoint do %s; use outro nome", name, manifest.FileName)
+		return endpointRecipe{}, fmt.Errorf("%q é o endpoint de exemplo do campo template_endpoint do %s; use outro nome", name, manifest.FileName)
 	}
 
 	from, to := endpointForms(spec.Name), endpointForms(name)

@@ -166,9 +166,9 @@ func TestCustomPlanRenamesAndCopies(t *testing.T) {
 		Language:     "python",
 		Architecture: "flat",
 		Endpoints:    []string{"invoice"},
-		Directories:  []string{"migrations", "src", "src/sample"},
-		Files:        []string{"README.md", "src/sample/__init__.py", "run-sample.sh", "logo.bin", "src/sample/extra.py"},
-		Endpoint:     manifest.EndpointSpec{Name: "invoice", Files: []string{"src/sample/extra.py"}, Register: []string{"README.md"}},
+		Directories:      []string{"migrations", "src", "src/sample"},
+		Files:            []string{"README.md", "src/sample/__init__.py", "run-sample.sh", "logo.bin", "src/sample/extra.py"},
+		TemplateEndpoint: manifest.EndpointSpec{Name: "invoice", Files: []string{"src/sample/extra.py"}, Register: []string{"README.md"}},
 	}
 	plan, err := custom.Plan(templates, m, "nova-api")
 	if err != nil {
@@ -203,8 +203,8 @@ func TestCustomPlanRenamesAndCopies(t *testing.T) {
 	if generated == nil || generated.Name != "nova-api" || generated.Template != "Sample" || generated.Architecture != "flat" || !slices.Equal(generated.Endpoints, []string{"invoice"}) {
 		t.Fatalf("manifesto gerado = %+v", generated)
 	}
-	if generated.Endpoint.Name != "invoice" || !slices.Equal(generated.Endpoint.Files, []string{"src/nova_api/extra.py"}) || !slices.Equal(generated.Endpoint.Register, []string{"README.md"}) {
-		t.Errorf("campo endpoint do manifesto gerado = %+v", generated.Endpoint)
+	if generated.TemplateEndpoint.Name != "invoice" || !slices.Equal(generated.TemplateEndpoint.Files, []string{"src/nova_api/extra.py"}) || !slices.Equal(generated.TemplateEndpoint.Register, []string{"README.md"}) {
+		t.Errorf("campo template_endpoint do manifesto gerado = %+v", generated.TemplateEndpoint)
 	}
 	if !slices.Contains(generated.Files, "src/nova_api/__init__.py") || !slices.Contains(generated.Directories, "src/nova_api") {
 		t.Errorf("caminhos do manifesto gerado não foram renomeados: %+v", generated)

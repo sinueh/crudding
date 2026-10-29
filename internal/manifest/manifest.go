@@ -32,10 +32,10 @@ type Manifest struct {
 	Framework    string   `json:"framework"`
 	Architecture string   `json:"architecture"`
 	Endpoints    []string `json:"endpoints"`
-	// Endpoint, quando preenchido, define como "crudding add/remove endpoint"
+	// TemplateEndpoint, quando preenchido, define como "crudding add/remove endpoint"
 	// cria e remove recursos neste projeto, no lugar do layout da arquitetura.
-	Endpoint  EndpointSpec `json:"endpoint"`
-	Database  string       `json:"database,omitempty"`
+	TemplateEndpoint EndpointSpec `json:"template_endpoint"`
+	Database         string       `json:"database,omitempty"`
 	Databases []string     `json:"databases,omitempty"`
 	ORM       string       `json:"orm,omitempty"`
 	// Vars são os dados próprios da arquitetura usados ao renderizar os
@@ -63,12 +63,16 @@ func (m *Manifest) UnmarshalJSON(data []byte) error {
 	type alias Manifest
 	var aux struct {
 		alias
-		RawFiles []json.RawMessage `json:"files"`
+		RawFiles       []json.RawMessage `json:"files"`
+		LegacyEndpoint *EndpointSpec     `json:"endpoint,omitempty"`
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
 	*m = Manifest(aux.alias)
+	if !m.TemplateEndpoint.Defined() && aux.LegacyEndpoint != nil && aux.LegacyEndpoint.Defined() {
+		m.TemplateEndpoint = *aux.LegacyEndpoint
+	}
 	m.Files = make([]string, len(aux.RawFiles))
 	m.FileMappings = make([]FileMapping, len(aux.RawFiles))
 	for i, raw := range aux.RawFiles {
@@ -103,7 +107,7 @@ type EndpointSpec struct {
 	Register []string `json:"register"` // arquivos compartilhados (rotas, imports)
 }
 
-// Defined diz se o campo endpoint foi preenchido.
+// Defined diz se o campo template_endpoint foi preenchido.
 func (e EndpointSpec) Defined() bool {
 	return e.Name != "" || len(e.Files) > 0 || len(e.Register) > 0
 }
@@ -242,7 +246,7 @@ func Parse(content []byte, label string) (Manifest, error) {
 // normalize troca listas nil por vazias, para o project.crud sempre ter as
 // mesmas chaves ("endpoints": [] em vez de null).
 func (m *Manifest) normalize() {
-	for _, list := range []*[]string{&m.Endpoints, &m.Endpoint.Files, &m.Endpoint.Register, &m.Ignore, &m.Directories, &m.Files} {
+	for _, list := range []*[]string{&m.Endpoints, &m.TemplateEndpoint.Files, &m.TemplateEndpoint.Register, &m.Ignore, &m.Directories, &m.Files} {
 		if *list == nil {
 			*list = []string{}
 		}

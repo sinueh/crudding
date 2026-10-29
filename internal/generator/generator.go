@@ -118,8 +118,8 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 	if err != nil {
 		return fmt.Errorf("decodificar manifesto %s: %w", manifestTmplPath, err)
 	}
-	if len(m.Endpoints) == 0 && m.Endpoint.Name != "" {
-		m.Endpoints = []string{m.Endpoint.Name}
+	if len(m.Endpoints) == 0 && m.TemplateEndpoint.Name != "" {
+		m.Endpoints = []string{m.TemplateEndpoint.Name}
 	}
 	if config.Runtime != "" {
 		m.Runtime = config.Runtime
@@ -136,8 +136,8 @@ func Generate(destination string, config project.Config, templates fs.FS) error 
 		plan.Manifest.Template = ""
 		plan.Manifest.Vars = nil
 		plan.Manifest.ORM = config.ORM
-		if len(plan.Manifest.Endpoints) == 0 && plan.Manifest.Endpoint.Name != "" {
-			plan.Manifest.Endpoints = []string{plan.Manifest.Endpoint.Name}
+		if len(plan.Manifest.Endpoints) == 0 && plan.Manifest.TemplateEndpoint.Name != "" {
+			plan.Manifest.Endpoints = []string{plan.Manifest.TemplateEndpoint.Name}
 		}
 		if config.Runtime != "" {
 			plan.Manifest.Runtime = config.Runtime

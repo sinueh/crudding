@@ -105,9 +105,9 @@ func Plan(templates fs.FS, m manifest.Manifest, projectName string, data ...any)
 	for index, file := range files {
 		generated.Files[index] = file.output
 	}
-	// Caminhos do campo endpoint podem conter o nome do projeto (ex.: src/<pacote>).
-	generated.Endpoint.Files = stripTmplAll(renameAll(rename, m.Endpoint.Files))
-	generated.Endpoint.Register = stripTmplAll(renameAll(rename, m.Endpoint.Register))
+	// Caminhos do campo template_endpoint podem conter o nome do projeto (ex.: src/<pacote>).
+	generated.TemplateEndpoint.Files = stripTmplAll(renameAll(rename, m.TemplateEndpoint.Files))
+	generated.TemplateEndpoint.Register = stripTmplAll(renameAll(rename, m.TemplateEndpoint.Register))
 
 	return common.Plan{
 		Manifest: &generated,

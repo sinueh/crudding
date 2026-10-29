@@ -145,7 +145,7 @@ func TestManifestTemplateFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	content, _ := os.ReadFile(filepath.Join(root, manifest.FileName))
-	for _, key := range []string{`"endpoints": []`, `"endpoint": {`, `"name": ""`, `"register": []`, `"ignore": []`, `"directories": []`, `"files": []`} {
+	for _, key := range []string{`"endpoints": []`, `"template_endpoint": {`, `"name": ""`, `"register": []`, `"ignore": []`, `"directories": []`, `"files": []`} {
 		if !strings.Contains(string(content), key) {
 			t.Errorf("project.crud não contém %s:\n%s", key, content)
 		}
