@@ -319,6 +319,9 @@ func nextMigration(root string) int {
 // tem.
 func appendMissingLines(content []byte, lines []string) []byte {
 	text := string(content)
+	if len(lines) > 0 && strings.TrimSpace(text) == "" {
+		text = ""
+	}
 	existing := strings.Split(text, "\n")
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" || slices.ContainsFunc(existing, func(current string) bool { return strings.TrimSpace(current) == strings.TrimSpace(line) }) {

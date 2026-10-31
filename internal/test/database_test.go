@@ -378,6 +378,25 @@ func TestNewProjectWithDatabaseGo(t *testing.T) {
 	if !strings.Contains(string(goModContent), "github.com/lib/pq") {
 		t.Errorf("go.mod missing github.com/lib/pq: %s", string(goModContent))
 	}
+
+	goSumContent, err := os.ReadFile(filepath.Join(projectDir, "go.sum"))
+	if err != nil {
+		t.Fatalf("read go.sum error = %v", err)
+	}
+	if !strings.Contains(string(goSumContent), "github.com/lib/pq v1.10.9 h1:") {
+		t.Errorf("go.sum missing github.com/lib/pq entry: %s", string(goSumContent))
+	}
+
+	mainContent, err := os.ReadFile(filepath.Join(projectDir, "cmd/api/main.go"))
+	if err != nil {
+		t.Fatalf("read cmd/api/main.go error = %v", err)
+	}
+	if !strings.Contains(string(mainContent), "config.ConnectPostgres(cfg.Postgres)") {
+		t.Errorf("main.go missing ConnectPostgres call: %s", string(mainContent))
+	}
+	if !strings.Contains(string(mainContent), "routes.SetupRouter(db)") {
+		t.Errorf("main.go missing routes.SetupRouter(db): %s", string(mainContent))
+	}
 }
 
 func TestNewProjectWithDatabasePython(t *testing.T) {

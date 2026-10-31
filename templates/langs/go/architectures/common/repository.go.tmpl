@@ -1,6 +1,7 @@
 package {{if eq .Architecture "hexagonal"}}postgres{{else if eq .Architecture "clean_arch"}}persistence{{end}}
 
 import (
+	"database/sql"
 	"errors"
 	"sync"
 
@@ -13,19 +14,32 @@ var (
 )
 
 type {{.VarName}}Repository struct {
+	db     *sql.DB
 	mu     sync.RWMutex
 	items  map[uint]domain.{{.Class}}
 	nextID uint
 }
 
-func New{{.Class}}Repository() ports.{{.Class}}Repository {
+func New{{.Class}}Repository(dbs ...*sql.DB) ports.{{.Class}}Repository {
+	var db *sql.DB
+	if len(dbs) > 0 {
+		db = dbs[0]
+	}
 	return &{{.VarName}}Repository{
+		db:     db,
 		items:  make(map[uint]domain.{{.Class}}),
 		nextID: 1,
 	}
 }
 
 func (r *{{.VarName}}Repository) Create({{.VarName}} *domain.{{.Class}}) error {
+	if r.db != nil {
+		return r.db.QueryRow(
+			"INSERT INTO {{.VarName}} (name, created_at) VALUES ($1, $2) RETURNING id",
+			{{.VarName}}.Name, {{.VarName}}.CreatedAt,
+		).Scan(&{{.VarName}}.ID)
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -36,6 +50,24 @@ func (r *{{.VarName}}Repository) Create({{.VarName}} *domain.{{.Class}}) error {
 }
 
 func (r *{{.VarName}}Repository) FindAll() ([]domain.{{.Class}}, error) {
+	if r.db != nil {
+		rows, err := r.db.Query("SELECT id, name, created_at FROM {{.VarName}} ORDER BY id")
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		list := make([]domain.{{.Class}}, 0)
+		for rows.Next() {
+			var item domain.{{.Class}}
+			if err := rows.Scan(&item.ID, &item.Name, &item.CreatedAt); err != nil {
+				return nil, err
+			}
+			list = append(list, item)
+		}
+		return list, rows.Err()
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -47,6 +79,18 @@ func (r *{{.VarName}}Repository) FindAll() ([]domain.{{.Class}}, error) {
 }
 
 func (r *{{.VarName}}Repository) FindByID(id uint) (*domain.{{.Class}}, error) {
+	if r.db != nil {
+		var item domain.{{.Class}}
+		err := r.db.QueryRow("SELECT id, name, created_at FROM {{.VarName}} WHERE id = $1", id).Scan(&item.ID, &item.Name, &item.CreatedAt)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, Err{{.Class}}NotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		return &item, nil
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -58,6 +102,21 @@ func (r *{{.VarName}}Repository) FindByID(id uint) (*domain.{{.Class}}, error) {
 }
 
 func (r *{{.VarName}}Repository) Delete(id uint) error {
+	if r.db != nil {
+		res, err := r.db.Exec("DELETE FROM {{.VarName}} WHERE id = $1", id)
+		if err != nil {
+			return err
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return Err{{.Class}}NotFound
+		}
+		return nil
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

@@ -1,0 +1,6 @@
+	if mysqlDB, err := config.ConnectMySQL(cfg.MySQL); err != nil {
+		log.Printf("Aviso: mysql indisponível (%v); usando armazenamento em memória", err)
+	} else {
+		db = mysqlDB
+		defer db.Close()
+	}

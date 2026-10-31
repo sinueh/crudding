@@ -1,6 +1,7 @@
 package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
 
 import (
+	"database/sql"
 	"net/http"
 
 {{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/{{.Package}}"
@@ -14,25 +15,25 @@ import (
 	"{{.GoModule}}/internal/infrastructure/persistence"
 {{end}})
 
-func SetupRouter() *http.ServeMux {
+func SetupRouter(dbs ...*sql.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
-{{if eq .Architecture "modular"}}	{{.VarName}}Svc := {{.Package}}.NewService()
+{{if eq .Architecture "modular"}}	{{.VarName}}Svc := {{.Package}}.NewService(dbs...)
 	{{.VarName}}Handler := {{.Package}}.NewHandler({{.VarName}}Svc)
-{{else if eq .Architecture "layered"}}	{{.VarName}}Svc := service.New{{.Class}}Service()
+{{else if eq .Architecture "layered"}}	{{.VarName}}Svc := service.New{{.Class}}Service(dbs...)
 	{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "hexagonal"}}	{{.VarName}}Repo := postgres.New{{.Class}}Repository()
+{{else if eq .Architecture "hexagonal"}}	{{.VarName}}Repo := postgres.New{{.Class}}Repository(dbs...)
 	{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
 	{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "clean_arch"}}	{{.VarName}}Repo := persistence.New{{.Class}}Repository()
+{{else if eq .Architecture "clean_arch"}}	{{.VarName}}Repo := persistence.New{{.Class}}Repository(dbs...)
 	{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
 	{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "flat"}}	{{.VarName}}Svc := New{{.Class}}Service()
+{{else if eq .Architecture "flat"}}	{{.VarName}}Svc := New{{.Class}}Service(dbs...)
 	{{.VarName}}Handler := New{{.Class}}Handler({{.VarName}}Svc)
-{{end}}	mux.HandleFunc("POST /api/v1/{{.VarName}}s", {{.VarName}}Handler.Create)
-	mux.HandleFunc("GET /api/v1/{{.VarName}}s", {{.VarName}}Handler.List)
-	mux.HandleFunc("GET /api/v1/{{.VarName}}s/{id}", {{.VarName}}Handler.GetByID)
-	mux.HandleFunc("DELETE /api/v1/{{.VarName}}s/{id}", {{.VarName}}Handler.Delete)
+{{end}}	mux.HandleFunc("POST /api/v1/{{.VarName}}", {{.VarName}}Handler.Create)
+	mux.HandleFunc("GET /api/v1/{{.VarName}}", {{.VarName}}Handler.List)
+	mux.HandleFunc("GET /api/v1/{{.VarName}}/{id}", {{.VarName}}Handler.GetByID)
+	mux.HandleFunc("DELETE /api/v1/{{.VarName}}/{id}", {{.VarName}}Handler.Delete)
 
 	return mux
 }

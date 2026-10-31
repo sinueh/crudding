@@ -1,16 +1,23 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
-{{if not (eq .Architecture "flat")}}
+
+{{if eq .Architecture "flat"}}	"{{.GoModule}}/config"
+{{else}}	"{{.GoModule}}/internal/config"
 	"{{.GoModule}}/internal/routes"
 {{end}})
 
 func main() {
-{{if eq .Architecture "flat"}}	router := SetupRouter()
-{{else}}	router := routes.SetupRouter()
+	cfg := config.Load()
+	var db *sql.DB
+	// crudding:db-init
+
+{{if eq .Architecture "flat"}}	router := SetupRouter(db)
+{{else}}	router := routes.SetupRouter(db)
 {{end}}
-	log.Println("Servidor HTTP rodando em http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Printf("Servidor HTTP rodando em http://localhost:%s", cfg.Port)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
 }

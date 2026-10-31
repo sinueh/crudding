@@ -1,6 +1,8 @@
 package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
 
 import (
+	"database/sql"
+
 {{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/{{.Package}}"
 {{else if eq .Architecture "layered"}}	"{{.GoModule}}/internal/handlers"
 	"{{.GoModule}}/internal/service"
@@ -13,27 +15,27 @@ import (
 {{end}}	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(dbs ...*sql.DB) *gin.Engine {
 	r := gin.Default()
 
 	api := r.Group("/api/v1")
 	{
-{{if eq .Architecture "modular"}}		{{.VarName}}Svc := {{.Package}}.NewService()
+{{if eq .Architecture "modular"}}		{{.VarName}}Svc := {{.Package}}.NewService(dbs...)
 		{{.VarName}}Handler := {{.Package}}.NewHandler({{.VarName}}Svc)
-{{else if eq .Architecture "layered"}}		{{.VarName}}Svc := service.New{{.Class}}Service()
+{{else if eq .Architecture "layered"}}		{{.VarName}}Svc := service.New{{.Class}}Service(dbs...)
 		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "hexagonal"}}		{{.VarName}}Repo := postgres.New{{.Class}}Repository()
+{{else if eq .Architecture "hexagonal"}}		{{.VarName}}Repo := postgres.New{{.Class}}Repository(dbs...)
 		{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
 		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "clean_arch"}}		{{.VarName}}Repo := persistence.New{{.Class}}Repository()
+{{else if eq .Architecture "clean_arch"}}		{{.VarName}}Repo := persistence.New{{.Class}}Repository(dbs...)
 		{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
 		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
-{{else if eq .Architecture "flat"}}		{{.VarName}}Svc := New{{.Class}}Service()
+{{else if eq .Architecture "flat"}}		{{.VarName}}Svc := New{{.Class}}Service(dbs...)
 		{{.VarName}}Handler := New{{.Class}}Handler({{.VarName}}Svc)
-{{end}}		api.POST("/{{.VarName}}s", {{.VarName}}Handler.Create)
-		api.GET("/{{.VarName}}s", {{.VarName}}Handler.List)
-		api.GET("/{{.VarName}}s/:id", {{.VarName}}Handler.GetByID)
-		api.DELETE("/{{.VarName}}s/:id", {{.VarName}}Handler.Delete)
+{{end}}		api.POST("/{{.VarName}}", {{.VarName}}Handler.Create)
+		api.GET("/{{.VarName}}", {{.VarName}}Handler.List)
+		api.GET("/{{.VarName}}/:id", {{.VarName}}Handler.GetByID)
+		api.DELETE("/{{.VarName}}/:id", {{.VarName}}Handler.Delete)
 	}
 
 	return r

@@ -1,7 +1,8 @@
 package {{if eq .Architecture "modular"}}{{.Package}}{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}application{{else if eq .Architecture "flat"}}main{{else}}service{{end}}
 
 import (
-{{if not (or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch"))}}	"errors"
+{{if not (or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch"))}}	"database/sql"
+	"errors"
 	"sync"
 {{end}}	"time"
 
@@ -23,55 +24,102 @@ type {{if eq .Architecture "modular"}}Service{{else}}{{.Class}}Service{{end}} in
 }
 
 type {{.VarName}}Service struct {
+	db     *sql.DB
 	mu     sync.RWMutex
 	items  map[uint]{{if eq .Architecture "layered"}}models.{{end}}{{.Class}}
 	nextID uint
 }
 
-func New{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}Service() {{if eq .Architecture "modular"}}Service{{else}}{{.Class}}Service{{end}} {
+func New{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}Service(dbs ...*sql.DB) {{if eq .Architecture "modular"}}Service{{else}}{{.Class}}Service{{end}} {
+	var db *sql.DB
+	if len(dbs) > 0 {
+		db = dbs[0]
+	}
 	return &{{.VarName}}Service{
+		db:     db,
 		items:  make(map[uint]{{if eq .Architecture "layered"}}models.{{end}}{{.Class}}),
 		nextID: 1,
 	}
 }
 
 func (s *{{.VarName}}Service) Create(req {{if eq .Architecture "layered"}}types.{{end}}Create{{.Class}}Request) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error) {
+	now := time.Now().UTC()
+	if s.db != nil {
+		var id uint
+		if err := s.db.QueryRow(
+			"INSERT INTO {{.VarName}} (name, created_at) VALUES ($1, $2) RETURNING id",
+			req.Name, now,
+		).Scan(&id); err != nil {
+			return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, err
+		}
+		return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{
+			ID:   id,
+			Name: req.Name,
+		}, nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	item := {{if eq .Architecture "layered"}}models.{{end}}{{.Class}}{
 		ID:        s.nextID,
 		Name:      req.Name,
-{{if eq .Class "User"}}		Email:     req.Email,
-		Password:  req.Password,
-{{end}}		CreatedAt: time.Now().UTC(),
+		CreatedAt: now,
 	}
 	s.nextID++
 	s.items[item.ID] = item
 
 	return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{
-		ID:    item.ID,
-		Name:  item.Name,
-{{if eq .Class "User"}}		Email: item.Email,
-{{end}}	}, nil
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
 }
 
 func (s *{{.VarName}}Service) List() ([]{{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error) {
+	if s.db != nil {
+		rows, err := s.db.Query("SELECT id, name FROM {{.VarName}} ORDER BY id")
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		res := make([]{{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, 0)
+		for rows.Next() {
+			var item {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response
+			if err := rows.Scan(&item.ID, &item.Name); err != nil {
+				return nil, err
+			}
+			res = append(res, item)
+		}
+		return res, rows.Err()
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	res := make([]{{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, 0, len(s.items))
 	for _, item := range s.items {
 		res = append(res, {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{
-			ID:    item.ID,
-			Name:  item.Name,
-{{if eq .Class "User"}}			Email: item.Email,
-{{end}}		})
+			ID:   item.ID,
+			Name: item.Name,
+		})
 	}
 	return res, nil
 }
 
 func (s *{{.VarName}}Service) GetByID(id uint) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error) {
+	if s.db != nil {
+		var item {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response
+		err := s.db.QueryRow("SELECT id, name FROM {{.VarName}} WHERE id = $1", id).Scan(&item.ID, &item.Name)
+		if errors.Is(err, sql.ErrNoRows) {
+			return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, Err{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}NotFound
+		}
+		if err != nil {
+			return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, err
+		}
+		return item, nil
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -81,13 +129,27 @@ func (s *{{.VarName}}Service) GetByID(id uint) ({{if eq .Architecture "layered"}
 	}
 
 	return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{
-		ID:    item.ID,
-		Name:  item.Name,
-{{if eq .Class "User"}}		Email: item.Email,
-{{end}}	}, nil
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
 }
 
 func (s *{{.VarName}}Service) Delete(id uint) error {
+	if s.db != nil {
+		res, err := s.db.Exec("DELETE FROM {{.VarName}} WHERE id = $1", id)
+		if err != nil {
+			return err
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			return Err{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}NotFound
+		}
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -108,9 +170,7 @@ func New{{.Class}}Service(repo ports.{{.Class}}Repository) ports.{{.Class}}Servi
 func (s *{{.VarName}}Service) Create(req domain.Create{{.Class}}Request) (domain.{{.Class}}Response, error) {
 	item := domain.{{.Class}}{
 		Name:      req.Name,
-{{if eq .Class "User"}}		Email:     req.Email,
-		Password:  req.Password,
-{{end}}		CreatedAt: time.Now().UTC(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	if err := s.repo.Create(&item); err != nil {
@@ -118,10 +178,9 @@ func (s *{{.VarName}}Service) Create(req domain.Create{{.Class}}Request) (domain
 	}
 
 	return domain.{{.Class}}Response{
-		ID:    item.ID,
-		Name:  item.Name,
-{{if eq .Class "User"}}		Email: item.Email,
-{{end}}	}, nil
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
 }
 
 func (s *{{.VarName}}Service) List() ([]domain.{{.Class}}Response, error) {
@@ -133,10 +192,9 @@ func (s *{{.VarName}}Service) List() ([]domain.{{.Class}}Response, error) {
 	res := make([]domain.{{.Class}}Response, 0, len(items))
 	for _, item := range items {
 		res = append(res, domain.{{.Class}}Response{
-			ID:    item.ID,
-			Name:  item.Name,
-{{if eq .Class "User"}}			Email: item.Email,
-{{end}}		})
+			ID:   item.ID,
+			Name: item.Name,
+		})
 	}
 	return res, nil
 }
@@ -148,10 +206,9 @@ func (s *{{.VarName}}Service) GetByID(id uint) (domain.{{.Class}}Response, error
 	}
 
 	return domain.{{.Class}}Response{
-		ID:    item.ID,
-		Name:  item.Name,
-{{if eq .Class "User"}}		Email: item.Email,
-{{end}}	}, nil
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
 }
 
 func (s *{{.VarName}}Service) Delete(id uint) error {

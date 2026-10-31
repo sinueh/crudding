@@ -1,0 +1,6 @@
+	if pgDB, err := config.ConnectPostgres(cfg.Postgres); err != nil {
+		log.Printf("Aviso: postgres indisponível (%v); usando armazenamento em memória", err)
+	} else {
+		db = pgDB
+		defer db.Close()
+	}

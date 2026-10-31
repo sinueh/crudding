@@ -349,11 +349,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/template", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/templates", "")
+	list := request(http.MethodGet, "/api/v1/template", "")
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/templates/1", "")
+	get := request(http.MethodGet, "/api/v1/template/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"layered": `package main
@@ -371,11 +371,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/template", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/templates", "")
+	list := request(http.MethodGet, "/api/v1/template", "")
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/templates/1", "")
+	get := request(http.MethodGet, "/api/v1/template/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"modular": `package main
@@ -393,11 +393,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/template", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/templates", "")
+	list := request(http.MethodGet, "/api/v1/template", "")
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/templates/1", "")
+	get := request(http.MethodGet, "/api/v1/template/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"hexagonal": `package main
@@ -415,11 +415,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/template", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/templates", "")
+	list := request(http.MethodGet, "/api/v1/template", "")
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/templates/1", "")
+	get := request(http.MethodGet, "/api/v1/template/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"clean_arch": `package main
@@ -437,11 +437,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/template", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/templates", "")
+	list := request(http.MethodGet, "/api/v1/template", "")
 	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/templates/1", "")
+	get := request(http.MethodGet, "/api/v1/template/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 }

@@ -151,8 +151,16 @@ func TestAddEndpointCopiesSampleRegistration(t *testing.T) {
 			project.Config{ProjectName: "Sample", Language: "go", Framework: "gin", Architecture: "hexagonal"},
 			"internal/routes/routes.go",
 			[]string{
-				"orderItemRepo := postgres.NewOrderItemRepository()",
-				`api.GET("/order_items", orderItemHandler.List)`,
+				"orderItemRepo := postgres.NewOrderItemRepository(dbs...)",
+				`api.GET("/order_item", orderItemHandler.List)`,
+			},
+		},
+		{
+			project.Config{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: "modular"},
+			"internal/routes/routes.go",
+			[]string{
+				"orderItemSvc := order_item.NewService(dbs...)",
+				`mux.HandleFunc("GET /api/v1/order_item", orderItemHandler.List)`,
 			},
 		},
 	}
@@ -239,5 +247,35 @@ func TestAddEndpointWithoutSampleRegistrationChangesNothing(t *testing.T) {
 	}
 	if !maps.Equal(readTree(t, root), before) {
 		t.Error("projeto alterado apesar do erro")
+	}
+}
+
+func TestAddEndpointKeepsExactUserRouteName(t *testing.T) {
+	root, m := generateProject(t, project.Config{
+		ProjectName:  "Sample",
+		Language:     "go",
+		Framework:    "raw",
+		Architecture: "modular",
+	})
+	initial := readTree(t, root)
+
+	names := []string{"category", "address", "product_category"}
+
+	for _, name := range names {
+		if _, err := generator.AddEndpoint(root, m, name); err != nil {
+			t.Fatalf("AddEndpoint(%s) error = %v", name, err)
+		}
+		assertFileContains(t, root, "internal/routes/routes.go", `"GET /api/v1/`+name+`"`)
+		assertFileContains(t, root, "internal/"+name+"/service.go", "INSERT INTO "+name+" ")
+	}
+
+	for _, name := range names {
+		if _, err := generator.RemoveEndpoint(root, m, name); err != nil {
+			t.Fatalf("RemoveEndpoint(%s) error = %v", name, err)
+		}
+	}
+
+	if !maps.Equal(readTree(t, root), initial) {
+		t.Error("projeto não voltou ao estado inicial após remover endpoints")
 	}
 }

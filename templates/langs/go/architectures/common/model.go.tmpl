@@ -5,7 +5,5 @@ import "time"
 type {{.Class}} struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`
-{{if eq .Class "User"}}	Email     string    `json:"email"`
-	Password  string    `json:"-"`
-{{end}}	CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"createdAt"`
 }

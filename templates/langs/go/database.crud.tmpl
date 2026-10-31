@@ -3,9 +3,11 @@
     { "marker": "// crudding:db-imports", "unique": true, "from": "langs/go/databases/{{.Database}}/imports.go.tmpl" },
     { "marker": "// crudding:db-struct", "from": "langs/go/databases/{{.Database}}/struct.go.tmpl" },
     { "marker": "// crudding:db-load", "from": "langs/go/databases/{{.Database}}/load.go.tmpl" },
-    { "marker": "// crudding:db-methods", "from": "langs/go/databases/{{.Database}}/methods.go.tmpl" }
+    { "marker": "// crudding:db-methods", "from": "langs/go/databases/{{.Database}}/methods.go.tmpl" },
+    { "marker": "// crudding:db-init", "from": "langs/go/databases/{{.Database}}/init.go.tmpl" }
   ],
   "append": [
-    { "into": "go.mod", "from": "langs/go/databases/{{.Database}}/go.mod.tmpl" }
+    { "into": "go.mod", "from": "langs/go/databases/{{.Database}}/go.mod.tmpl" },
+    { "into": "go.sum", "from": "langs/go/databases/{{.Database}}/go.sum.tmpl" }
   ]
 }
