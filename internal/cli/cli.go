@@ -41,8 +41,23 @@ var commands = []Command{
 		Run:     runInit,
 	},
 	{
+		Args:    "template list",
+		Summary: "lista todos os templates salvos em .crudding/templates",
+		Run:     runTemplateList,
+	},
+	{
+		Args:    "template use",
+		Summary: "gera um novo projeto a partir de um template salvo (crudding template use <template> [nome])",
+		Run:     runTemplateUse,
+	},
+	{
+		Args:    "template export",
+		Summary: "empacota um template salvo em um arquivo .zip (crudding template export <template> [destino])",
+		Run:     runTemplateExport,
+	},
+	{
 		Args:    "template",
-		Summary: "gera um novo projeto a partir de um projeto-template (crudding template <pasta> [nome])",
+		Summary: "mostra os comandos de template (list, use, export)",
 		Run:     runTemplate,
 	},
 	{
@@ -66,6 +81,11 @@ var commands = []Command{
 		Run:     runAddEndpoint,
 	},
 	{
+		Args:    "add template",
+		Summary: "salva um projeto como template em .crudding/templates (crudding add template <pasta> [nome])",
+		Run:     runAddTemplate,
+	},
+	{
 		Args:    "add db",
 		Summary: "adiciona conexão com banco de dados ao projeto atual (lê o project.crud)",
 		Run:     runAddDB,
@@ -85,9 +105,13 @@ func Commands() []Command {
 // Usage gera o texto de ajuda a partir dos comandos registrados.
 func Usage() string {
 	var b strings.Builder
+	width := 0
+	for _, cmd := range commands {
+		width = max(width, len(cmd.label()))
+	}
 	b.WriteString("uso:\n")
 	for _, cmd := range commands {
-		fmt.Fprintf(&b, "  %-21s    %s\n", cmd.label(), cmd.Summary)
+		fmt.Fprintf(&b, "  %-*s    %s\n", width, cmd.label(), cmd.Summary)
 	}
 	return b.String()
 }

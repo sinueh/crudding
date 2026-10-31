@@ -46,6 +46,6 @@ func runInit(args []string, stdout, _ io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "%s gravado em %s\n", manifest.FileName, filepath.Join(workingDirectory, manifest.FileName))
 	fmt.Fprintf(stdout, "Template %s: %d pastas e %d arquivos (o que está em \"ignore\" ficou de fora).\n", m.Name, len(m.Directories), len(m.Files))
-	fmt.Fprintf(stdout, "\nPara gerar um projeto a partir dele: crudding template %s <nome>\n", workingDirectory)
+	fmt.Fprintf(stdout, "\nPara salvar como template: crudding template %s [nome]\n", workingDirectory)
 	return nil
 }
