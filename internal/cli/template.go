@@ -10,7 +10,6 @@ import (
 
 	"github.com/sinueh/crudding/internal/generator"
 	"github.com/sinueh/crudding/internal/generator/custom"
-	"github.com/sinueh/crudding/internal/manifest"
 	"github.com/sinueh/crudding/internal/project"
 )
 
@@ -18,20 +17,41 @@ import (
 func TemplateUsage() string {
 	var b strings.Builder
 	b.WriteString("como funciona:\n")
-	b.WriteString("  Salva um projeto como template em ~/.crudding/templates/<nome>.\n")
-	b.WriteString("  Os templates salvos podem ser listados e usados para gerar novos projetos.\n\n")
+	b.WriteString("  Gerencia os templates salvos em ~/.crudding/templates/<nome>.\n")
+	b.WriteString("  Os templates salvos podem ser listados, usados para gerar novos projetos e exportados.\n\n")
 	b.WriteString("comandos:\n")
-	b.WriteString("  crudding template <pasta> [<nome> | name:<nome> | n:<nome>]\n")
+	b.WriteString("  crudding add template <pasta> [<nome> | name:<nome> | n:<nome>]\n")
 	b.WriteString("    Salva o projeto de <pasta> como template. Sem o nome, solicita interativamente.\n")
 	b.WriteString("  crudding template list\n")
 	b.WriteString("    Lista todos os templates salvos em ~/.crudding/templates.\n")
 	b.WriteString("  crudding template use <template> [<nome> | name:<nome> | n:<nome>]\n")
-	b.WriteString("    Gera um novo projeto a partir de um template salvo.\n\n")
+	b.WriteString("    Gera um novo projeto a partir de um template salvo.\n")
+	b.WriteString("  crudding template export <template> [destino]\n")
+	b.WriteString("    Empacota um template salvo em um arquivo .zip (padrão: ./<template>.zip).\n\n")
 	b.WriteString("exemplos:\n")
-	b.WriteString("  crudding template ./meu-projeto\n")
-	b.WriteString("  crudding template ./meu-projeto meu-template\n")
+	b.WriteString("  crudding add template ./meu-projeto\n")
+	b.WriteString("  crudding add template ./meu-projeto meu-template\n")
 	b.WriteString("  crudding template list\n")
 	b.WriteString("  crudding template use meu-template minha-api\n")
+	b.WriteString("  crudding template export meu-template\n")
+	return b.String()
+}
+
+// TemplateExportUsage gera o texto de ajuda do comando "crudding template export".
+func TemplateExportUsage() string {
+	var b strings.Builder
+	b.WriteString("como funciona:\n")
+	b.WriteString("  Empacota um template salvo em ~/.crudding/templates num arquivo .zip, com o\n")
+	b.WriteString("  conteúdo dentro da pasta <template>/. Para usá-lo em outra máquina, extraia o\n")
+	b.WriteString("  .zip e rode \"crudding add template ./<template>\".\n")
+	b.WriteString("  - Sem o destino, grava ./<template>.zip; se o destino for uma pasta, grava <destino>/<template>.zip.\n")
+	b.WriteString("  - Nunca sobrescreve um arquivo existente.\n\n")
+	b.WriteString("uso:\n")
+	b.WriteString("  crudding template export <template> [destino]\n\n")
+	b.WriteString("exemplos:\n")
+	b.WriteString("  crudding template export meu-template\n")
+	b.WriteString("  crudding template export meu-template ~/Downloads\n")
+	b.WriteString("  crudding template export meu-template backup.zip\n")
 	return b.String()
 }
 
@@ -67,100 +87,25 @@ func runTemplate(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	if slices.ContainsFunc(args, func(token string) bool { return slices.Contains(helpFlags, token) }) {
+	if len(args) == 0 || slices.ContainsFunc(args, func(token string) bool { return slices.Contains(helpFlags, token) }) {
 		fmt.Fprint(stdout, TemplateUsage())
 		return nil
 	}
 
-	if len(args) > 0 && args[0] == "list" {
+	switch args[0] {
+	case "list":
 		return runTemplateList(args[1:], stdout, stderr)
-	}
-
-	if len(args) > 0 && (args[0] == "use" || args[0] == "new") {
+	case "use", "new":
 		return runTemplateUse(args[1:], stdout, stderr)
+	case "export":
+		return runTemplateExport(args[1:], stdout, stderr)
 	}
 
-	var dir, name string
-	if len(args) == 0 {
-		dir, err = project.ReadProjectPath(os.Stdin, stdout)
-		if err != nil {
-			return err
-		}
-	} else {
-		dir = strings.TrimSpace(args[0])
-		if len(args) > 2 {
-			return fmt.Errorf("argumentos inesperados: %s", strings.Join(args[2:], " "))
-		}
-		if len(args) == 2 {
-			name = strings.TrimSpace(args[1])
-			if key, value, ok := strings.Cut(name, ":"); ok && (key == "name" || key == "n") {
-				name = strings.TrimSpace(value)
-			}
-			if err := project.ValidateProjectName(name); err != nil {
-				return err
-			}
-		}
+	// Atalho: crudding template meu-template minha-api gera o projeto a partir do template salvo.
+	if _, _, err := custom.Get(strings.TrimSpace(args[0])); err == nil {
+		return runTemplateUse(args, stdout, stderr)
 	}
-
-	// Se o caminho informado não existe localmente, mas existe como template salvo,
-	// gera o projeto a partir do template (ex.: crudding template meu-template minha-api).
-	if _, statErr := os.Stat(dir); statErr != nil {
-		if _, _, getErr := custom.Get(dir); getErr == nil {
-			return runTemplateUse(args, stdout, stderr)
-		}
-		return fmt.Errorf("diretório %s não encontrado", dir)
-	}
-
-	dirInfo, err := os.Stat(dir)
-	if err != nil {
-		return fmt.Errorf("diretório %s não encontrado", dir)
-	}
-	if !dirInfo.IsDir() {
-		return fmt.Errorf("%s não é um diretório", dir)
-	}
-
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return fmt.Errorf("resolver diretório %s: %w", dir, err)
-	}
-
-	defaultName := filepath.Base(absDir)
-	if m, err := manifest.Read(filepath.Join(absDir, manifest.FileName)); err == nil && m.Name != "" {
-		defaultName = m.Name
-		unlisted, err := custom.Unlisted(os.DirFS(absDir), m)
-		if err == nil && len(unlisted) > 0 {
-			fmt.Fprintf(stdout, "Aviso: %d arquivo(s) do template não estão em \"files\" e não serão copiados (rode \"crudding init\" na pasta do template para atualizar):\n", len(unlisted))
-			const shown = 20
-			for _, file := range unlisted[:min(len(unlisted), shown)] {
-				fmt.Fprintf(stdout, "  %s\n", file)
-			}
-			if len(unlisted) > shown {
-				fmt.Fprintf(stdout, "  ... e mais %d\n", len(unlisted)-shown)
-			}
-		}
-	}
-
-	if name == "" {
-		name, err = project.ReadTemplateName(os.Stdin, stdout, defaultName)
-		if err != nil {
-			return err
-		}
-	}
-
-	targetDir, savedManifest, err := custom.Save(absDir, name)
-	if err != nil {
-		return err
-	}
-
-	stack := savedManifest.Stack()
-	if stack == "" {
-		stack = "personalizado"
-	}
-	fmt.Fprintf(stdout, "Template %s salvo com sucesso em: %s\n", name, targetDir)
-	fmt.Fprintf(stdout, "Estrutura: %d pastas, %d arquivos (%s)\n\n", len(savedManifest.Directories), len(savedManifest.Files), stack)
-	fmt.Fprintf(stdout, "Para listar os templates salvos: crudding template list\n")
-	fmt.Fprintf(stdout, "Para gerar um projeto a partir deste template: crudding template use %s <nome-do-projeto>\n", name)
-	return nil
+	return fmt.Errorf("subcomando desconhecido: %s; para salvar um projeto como template use \"crudding add template <pasta> [nome]\"", args[0])
 }
 
 func runTemplateList(args []string, stdout, _ io.Writer) error {
@@ -179,7 +124,7 @@ func runTemplateList(args []string, stdout, _ io.Writer) error {
 		return err
 	}
 	if len(list) == 0 {
-		fmt.Fprintf(stdout, "Nenhum template salvo em %s.\n\nPara salvar um template:\n  crudding template <pasta> [nome]\n", templatesDir)
+		fmt.Fprintf(stdout, "Nenhum template salvo em %s.\n\nPara salvar um template:\n  crudding add template <pasta> [nome]\n", templatesDir)
 		return nil
 	}
 	fmt.Fprintf(stdout, "Templates salvos em %s (%d):\n\n", templatesDir, len(list))
@@ -241,5 +186,34 @@ func runTemplateUse(args []string, stdout, _ io.Writer) error {
 
 	fmt.Fprintf(stdout, "\nProjeto gerado em: %s\n", projectDirectory)
 	fmt.Fprintf(stdout, "Template: %s (%d pastas, %d arquivos)\n", m.Name, len(m.Directories), len(m.Files))
+	return nil
+}
+
+func runTemplateExport(args []string, stdout, _ io.Writer) error {
+	for _, token := range args {
+		if slices.Contains(helpFlags, token) {
+			fmt.Fprint(stdout, TemplateExportUsage())
+			return nil
+		}
+	}
+	if len(args) == 0 {
+		return fmt.Errorf("nenhum template informado; execute \"crudding template list\" para ver os templates salvos")
+	}
+	if len(args) > 2 {
+		return fmt.Errorf("argumentos inesperados: %s", strings.Join(args[2:], " "))
+	}
+
+	name := strings.TrimSpace(args[0])
+	var dest string
+	if len(args) == 2 {
+		dest = strings.TrimSpace(args[1])
+	}
+	archive, err := custom.Export(name, dest)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(stdout, "Template %s exportado para: %s\n\n", name, archive)
+	fmt.Fprintf(stdout, "Para importar em outra máquina, extraia o .zip e rode: crudding add template ./%s\n", name)
 	return nil
 }

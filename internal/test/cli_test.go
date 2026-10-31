@@ -1,9 +1,11 @@
 package test
 
 import (
+	"archive/zip"
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -802,7 +804,7 @@ func TestCLITemplate(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 	// Salva o template
-	args := []string{"template", templateDir, "n:meu-template"}
+	args := []string{"add", "template", templateDir, "n:meu-template"}
 	if code := cli.Run(args, &stdout, &stderr); code != 0 {
 		t.Fatalf("Run(%v) exit code = %d, stderr = %q", args, code, stderr.String())
 	}
@@ -841,10 +843,10 @@ func TestCLITemplate(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"template"}, "nenhuma pasta de template"},
-		{[]string{"template", filepath.Join(tmp, "nao-existe"), "outro"}, "não encontrado"},
-		{[]string{"template", templateDir, "a/b"}, "nome inválido"},
-		{[]string{"template", templateDir, "outro", "extra"}, "argumentos inesperados"},
+		{[]string{"add", "template", filepath.Join(tmp, "nao-existe"), "outro"}, "não encontrado"},
+		{[]string{"add", "template", templateDir, "a/b"}, "nome inválido"},
+		{[]string{"add", "template", templateDir, "outro", "extra"}, "argumentos inesperados"},
+		{[]string{"template", templateDir}, "crudding add template"},
 		{[]string{"template", "use"}, "nenhum template informado"},
 		{[]string{"template", "use", "nao-existe"}, "não encontrado"},
 	} {
@@ -856,13 +858,100 @@ func TestCLITemplate(t *testing.T) {
 	}
 	assertFilesAbsent(t, tmp, "outro")
 
+	for _, args := range [][]string{{"template"}, {"template", "-h"}} {
+		stdout.Reset()
+		if code := cli.Run(args, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding add template <pasta>") {
+			t.Errorf("Run(%v) = %d, stdout = %q", args, code, stdout.String())
+		}
+	}
+
 	stdout.Reset()
-	if code := cli.Run([]string{"template", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template <pasta>") {
-		t.Errorf("Run(template -h) = %d, stdout = %q", code, stdout.String())
+	if code := cli.Run([]string{"add", "template", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding add template <pasta>") {
+		t.Errorf("Run(add template -h) = %d, stdout = %q", code, stdout.String())
 	}
 
 	stdout.Reset()
 	if code := cli.Run([]string{"template", "list", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template list") {
 		t.Errorf("Run(template list -h) = %d, stdout = %q", code, stdout.String())
+	}
+}
+
+func TestCLITemplateExport(t *testing.T) {
+	t.Setenv("CRUDDING_TEMPLATES_DIR", t.TempDir())
+	templateDir := copyExampleTemplate(t)
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"add", "template", templateDir, "meu-template"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add template) exit code = %d, stderr = %q", code, stderr.String())
+	}
+
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "export", "meu-template"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template export) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Template meu-template exportado para") {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+
+	archive, err := zip.OpenReader(filepath.Join(tmp, "meu-template.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer archive.Close()
+	var names []string
+	for _, file := range archive.File {
+		names = append(names, file.Name)
+	}
+	for _, want := range []string{"meu-template/", "meu-template/project.crud", "meu-template/go.mod", "meu-template/internal/item/handler.go"} {
+		if !slices.Contains(names, want) {
+			t.Errorf("zip não contém %q: %v", want, names)
+		}
+	}
+
+	// Extrai o .zip e salva de novo como template: o ciclo de importação.
+	extracted := t.TempDir()
+	if err := os.CopyFS(extracted, archive); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if code := cli.Run([]string{"add", "template", filepath.Join(extracted, "meu-template"), "meu-importado"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add template meu-importado) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if code := cli.Run([]string{"template", "use", "meu-importado", "minha-api"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template use meu-importado) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	assertFileContains(t, filepath.Join(tmp, "minha-api"), "go.mod", "module minha-api")
+
+	// Para uma pasta existente, grava <pasta>/<template>.zip.
+	outDir := t.TempDir()
+	if code := cli.Run([]string{"template", "export", "meu-template", outDir}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template export <pasta>) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "meu-template.zip")); err != nil {
+		t.Error(err)
+	}
+
+	for _, testCase := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"template", "export"}, "nenhum template informado"},
+		{[]string{"template", "export", "nao-existe"}, "não encontrado"},
+		{[]string{"template", "export", "../fora"}, "nome de template inválido"},
+		{[]string{"template", "export", "meu-template"}, "já existe"},
+		{[]string{"template", "export", "meu-template", "a.zip", "extra"}, "argumentos inesperados"},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run(testCase.args, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), testCase.want) {
+			t.Errorf("Run(%v) = %d, stderr = %q, want contendo %q", testCase.args, code, stderr.String(), testCase.want)
+		}
+	}
+
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "export", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template export") {
+		t.Errorf("Run(template export -h) = %d, stdout = %q", code, stdout.String())
 	}
 }

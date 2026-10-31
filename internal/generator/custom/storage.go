@@ -1,8 +1,10 @@
 package custom
 
 import (
+	"archive/zip"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -177,3 +179,94 @@ func Remove(name string) error {
 	return os.RemoveAll(target)
 }
 
+// Export empacota o template salvo name num arquivo .zip em dest, com o
+// conteúdo dentro de uma pasta <name>/, pronta para "crudding add template <pasta>".
+// Sem dest, grava ./<name>.zip; se dest for uma pasta existente, grava
+// <dest>/<name>.zip. Nunca sobrescreve um arquivo existente.
+func Export(name, dest string) (string, error) {
+	if err := project.ValidateProjectName(name); err != nil {
+		return "", fmt.Errorf("nome de template inválido: %w", err)
+	}
+	source, _, err := Get(name)
+	if err != nil {
+		return "", err
+	}
+
+	if dest == "" {
+		dest = "."
+	}
+	if info, err := os.Stat(dest); err == nil && info.IsDir() {
+		dest = filepath.Join(dest, name+".zip")
+	}
+	dest, err = filepath.Abs(dest)
+	if err != nil {
+		return "", fmt.Errorf("resolver destino: %w", err)
+	}
+	if rel, err := filepath.Rel(source, dest); err == nil && filepath.IsLocal(rel) {
+		return "", fmt.Errorf("o arquivo exportado não pode ficar dentro do template (%s)", source)
+	}
+
+	file, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if errors.Is(err, fs.ErrExist) {
+		return "", fmt.Errorf("%s já existe", dest)
+	}
+	if err != nil {
+		return "", fmt.Errorf("criar %s: %w", dest, err)
+	}
+	if err := writeZip(file, os.DirFS(source), name); err != nil {
+		file.Close()
+		os.Remove(dest)
+		return "", fmt.Errorf("exportar template %q: %w", name, err)
+	}
+	if err := file.Close(); err != nil {
+		os.Remove(dest)
+		return "", fmt.Errorf("gravar %s: %w", dest, err)
+	}
+	return dest, nil
+}
+
+// writeZip grava todo o conteúdo de templates em w sob a pasta prefix/.
+// Symlinks e arquivos especiais são recusados, como no Plan.
+func writeZip(w io.Writer, templates fs.FS, prefix string) error {
+	archive := zip.NewWriter(w)
+	err := fs.WalkDir(templates, ".", func(rel string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && !info.Mode().IsRegular() {
+			return fmt.Errorf("%s não é um arquivo comum", rel)
+		}
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		header.Name = prefix
+		if rel != "." {
+			header.Name = prefix + "/" + rel
+		}
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+		writer, err := archive.CreateHeader(header)
+		if err != nil || info.IsDir() {
+			return err
+		}
+		src, err := templates.Open(rel)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		_, err = io.Copy(writer, src)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return archive.Close()
+}
