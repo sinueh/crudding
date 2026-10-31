@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/manifest"
@@ -269,4 +270,175 @@ func writeZip(w io.Writer, templates fs.FS, prefix string) error {
 		return err
 	}
 	return archive.Close()
+}
+
+// Import extrai um arquivo .zip de template e o instala diretamente em
+// .crudding/templates/<nome>, sem perguntas interativas.
+// Aceita tanto .zip com pasta raiz única (<nome>/...) quanto arquivos na raiz do .zip.
+// Nunca sobrescreve um template existente.
+func Import(zipPath string) (string, manifest.Manifest, error) {
+	info, err := os.Stat(zipPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", manifest.Manifest{}, fmt.Errorf("arquivo %s não encontrado", zipPath)
+	}
+	if err != nil {
+		return "", manifest.Manifest{}, fmt.Errorf("acessar %s: %w", zipPath, err)
+	}
+	if info.IsDir() {
+		return "", manifest.Manifest{}, fmt.Errorf("%s é um diretório; informe um arquivo .zip", zipPath)
+	}
+
+	archive, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return "", manifest.Manifest{}, fmt.Errorf("abrir arquivo .zip %s: %w", zipPath, err)
+	}
+	defer archive.Close()
+
+	if len(archive.File) == 0 {
+		return "", manifest.Manifest{}, fmt.Errorf("o arquivo %s está vazio", zipPath)
+	}
+
+	hasFiles := false
+	for _, entry := range archive.File {
+		entryInfo := entry.FileInfo()
+		if !entryInfo.IsDir() && !entryInfo.Mode().IsRegular() {
+			return "", manifest.Manifest{}, fmt.Errorf("%s não é um arquivo comum", entry.Name)
+		}
+		rel := strings.TrimSuffix(entry.Name, "/")
+		if rel == "" || !fs.ValidPath(rel) || rel == "." || !filepath.IsLocal(filepath.FromSlash(rel)) {
+			return "", manifest.Manifest{}, fmt.Errorf("caminho %q inválido no arquivo .zip", entry.Name)
+		}
+		if !entryInfo.IsDir() {
+			hasFiles = true
+		}
+	}
+	if !hasFiles {
+		return "", manifest.Manifest{}, fmt.Errorf("o arquivo %s não contém arquivos", zipPath)
+	}
+
+	topDir := detectZipTopDir(archive.File)
+	templateName := topDir
+	if templateName == "" {
+		base := filepath.Base(zipPath)
+		templateName = strings.TrimSuffix(base, filepath.Ext(base))
+	}
+	if err := project.ValidateProjectName(templateName); err != nil {
+		return "", manifest.Manifest{}, fmt.Errorf("nome de template inválido: %w", err)
+	}
+
+	templatesDir, err := EnsureTemplatesDir()
+	if err != nil {
+		return "", manifest.Manifest{}, err
+	}
+
+	targetDir := filepath.Join(templatesDir, templateName)
+	if _, err := os.Stat(targetDir); err == nil {
+		return "", manifest.Manifest{}, fmt.Errorf("template %q já existe em %s", templateName, targetDir)
+	}
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return "", manifest.Manifest{}, fmt.Errorf("criar diretório do template %s: %w", targetDir, err)
+	}
+	success := false
+	defer func() {
+		if !success {
+			_ = os.RemoveAll(targetDir)
+		}
+	}()
+
+	for _, entry := range archive.File {
+		rel := strings.TrimSuffix(entry.Name, "/")
+		if topDir != "" {
+			if rel == topDir {
+				continue
+			}
+			rel = strings.TrimPrefix(rel, topDir+"/")
+		}
+		target := filepath.Join(targetDir, filepath.FromSlash(rel))
+		entryInfo := entry.FileInfo()
+		if entryInfo.IsDir() {
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return "", manifest.Manifest{}, fmt.Errorf("criar diretório %s: %w", rel, err)
+			}
+			continue
+		}
+		if err := extractZipFile(entry, target, 0644|entryInfo.Mode().Perm()&0111); err != nil {
+			return "", manifest.Manifest{}, fmt.Errorf("extrair %s: %w", rel, err)
+		}
+	}
+
+	manifestPath := filepath.Join(targetDir, manifest.FileName)
+	m, err := manifest.Read(manifestPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		m, err = Init(targetDir)
+		if err != nil {
+			return "", manifest.Manifest{}, fmt.Errorf("inicializar manifesto do template: %w", err)
+		}
+	} else if err != nil {
+		return "", manifest.Manifest{}, fmt.Errorf("ler %s: %w", manifest.FileName, err)
+	} else {
+		if len(m.Files) == 0 {
+			return "", manifest.Manifest{}, fmt.Errorf("o %s do template não lista files", manifest.FileName)
+		}
+		for _, dir := range m.Directories {
+			if err := checkPaths(dir, dir); err != nil {
+				return "", manifest.Manifest{}, fmt.Errorf("directories: %w", err)
+			}
+		}
+		for _, file := range m.Files {
+			if err := checkPaths(file, file); err != nil {
+				return "", manifest.Manifest{}, fmt.Errorf("files: %w", err)
+			}
+		}
+		if m.Name != templateName {
+			m.Name = templateName
+			if err := manifest.Write(targetDir, m); err != nil {
+				return "", manifest.Manifest{}, fmt.Errorf("atualizar %s: %w", manifest.FileName, err)
+			}
+		}
+	}
+
+	success = true
+	return targetDir, m, nil
+}
+
+func detectZipTopDir(files []*zip.File) string {
+	var topDir string
+	for _, entry := range files {
+		rel := strings.TrimSuffix(entry.Name, "/")
+		first, _, hasSlash := strings.Cut(rel, "/")
+		if !hasSlash && !entry.FileInfo().IsDir() {
+			return ""
+		}
+		if first == "" {
+			return ""
+		}
+		if topDir == "" {
+			topDir = first
+		} else if first != topDir {
+			return ""
+		}
+	}
+	return topDir
+}
+
+func extractZipFile(entry *zip.File, target string, mode fs.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	rc, err := entry.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, rc); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }

@@ -89,6 +89,7 @@ crudding add template . meu-template         # saves the project as template int
 crudding template list                       # lists saved templates
 crudding template use meu-template my-api    # generates a new project from the saved template
 crudding template export meu-template        # packs the saved template into ./meu-template.zip
+crudding template import ./meu-template.zip  # extracts and installs the template into ~/.crudding/templates/meu-template
 ```
 
 `crudding init` writes a `project.crud` in the current directory listing every folder (`directories`) and file (`files`) of the project, except what matches `ignore`:
@@ -123,7 +124,7 @@ crudding template export meu-template        # packs the saved template into ./m
 
 Choose a distinctive `name`: a generic one such as `api` would be replaced everywhere.
 
-`crudding template export <template> [destination]` packs a saved template into a `.zip` with its contents inside a `<template>/` folder. Without a destination it writes `./<template>.zip`; if the destination is an existing folder it writes `<destination>/<template>.zip`. It never overwrites an existing file. To use it on another machine, extract the `.zip` and run `crudding add template ./<template>`.
+`crudding template export <template> [destination]` packs a saved template into a `.zip` with its contents inside a `<template>/` folder. Without a destination it writes `./<template>.zip`; if the destination is an existing folder it writes `<destination>/<template>.zip`. It never overwrites an existing file. To use it on another machine, run `crudding template import <file.zip>`, which extracts the `.zip` and installs the template directly into `~/.crudding/templates/<template>` without interactive prompts.
 
 The new project's `project.crud` is a copy of the template's, with the new `name`, `"template": "<template name>"` and the renamed paths, so it can be used as a template too. `crudding add db` is not supported for `"architecture": "custom"`. A template made from a crudding project keeps its architecture (e.g. `python + fastapi + modular`), so `add db` and the built-in `add endpoint` keep working in projects generated from it.
 

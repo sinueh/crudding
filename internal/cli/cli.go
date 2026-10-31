@@ -56,8 +56,13 @@ var commands = []Command{
 		Run:     runTemplateExport,
 	},
 	{
+		Args:    "template import",
+		Summary: "importa um template de um arquivo .zip para .crudding/templates (crudding template import <arquivo.zip>)",
+		Run:     runTemplateImport,
+	},
+	{
 		Args:    "template",
-		Summary: "mostra os comandos de template (list, use, export)",
+		Summary: "mostra os comandos de template (list, use, export, import)",
 		Run:     runTemplate,
 	},
 	{

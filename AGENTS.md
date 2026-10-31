@@ -52,7 +52,7 @@ crudding/
 │   │   ├── add_db.go            # Comando "crudding add db" (runAddDB)
 │   │   ├── init.go              # Comando "crudding init" (runInit)
 │   │   ├── add_template.go      # Comando "crudding add template" (runAddTemplate)
-│   │   ├── template.go          # Comandos "crudding template list|use|export" (runTemplate)
+│   │   ├── template.go          # Comandos "crudding template list|use|export|import" (runTemplate)
 │   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
 │   ├── generator/
 │   │   ├── common/
@@ -152,16 +152,17 @@ crudding/
 
 O `TestEndpointRoundTripAllCombinations` confere isso em todas as combinações. Node ainda não gera o campo. Os markers `crudding:db-*`, `crudding:compose-*` e `crudding:env` são do `add db` e não podem ser removidos dos templates.
 
-### `crudding add template <pasta> [nome]` e `crudding template list|use|export` (projetos-template)
+### `crudding add template <pasta> [nome]` e `crudding template list|use|export|import` (projetos-template)
 
 Caminho paralelo ao registry: qualquer projeto vira template, e os templates são salvos em `~/.crudding/templates/`.
 
 1. `crudding add template <pasta> [nome]` (`internal/cli/add_template.go`) copia o projeto de `<pasta>` para `~/.crudding/templates/<nome>` (usando `custom.Save`), garantindo um `project.crud` válido e renomeando o projeto para o nome do template. Se `<nome>` não for passado, solicita interativamente.
 2. `crudding template list` lista todos os templates salvos em `~/.crudding/templates/`.
 3. `crudding template use <template> <nome>` gera um novo projeto a partir de um template salvo (usando `generator.GenerateFromTemplate`).
-4. `crudding template export <template> [destino]` empacota um template salvo em `.zip` (`custom.Export`), com o conteúdo sob a pasta `<template>/`; padrão `./<template>.zip`, nunca sobrescreve e recusa symlinks. Para importar, extrai-se o `.zip` e roda-se `crudding add template ./<template>`.
-5. `custom.Init` grava (ou atualiza) o `project.crud` do diretório atual. Num manifesto novo: `name` = nome da pasta, `architecture: "custom"` e `ignore` vazio. Em seguida chama `common.ListStructure`, que aplica o `ignore` e grava `directories` e `files`.
-6. `add db` recusa `architecture: "custom"` (`AddDatabase`). `add/remove endpoint` dependem só do campo `template_endpoint`, como em qualquer projeto.
+4. `crudding template export <template> [destino]` empacota um template salvo em `.zip` (`custom.Export`), com o conteúdo sob a pasta `<template>/`; padrão `./<template>.zip`, nunca sobrescreve e recusa symlinks.
+5. `crudding template import <arquivo.zip>` extrai um `.zip` e instala o template diretamente em `~/.crudding/templates/<template>` (`custom.Import`), sem perguntas interativas, validando caminhos/symlinks e sem sobrescrever templates existentes.
+6. `custom.Init` grava (ou atualiza) o `project.crud` do diretório atual. Num manifesto novo: `name` = nome da pasta, `architecture: "custom"` e `ignore` vazio. Em seguida chama `common.ListStructure`, que aplica o `ignore` e grava `directories` e `files`.
+7. `add db` recusa `architecture: "custom"` (`AddDatabase`). `add/remove endpoint` dependem só do campo `template_endpoint`, como em qualquer projeto.
 
 ### Campo `template_endpoint` (endpoints personalizados)
 

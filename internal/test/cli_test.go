@@ -955,3 +955,114 @@ func TestCLITemplateExport(t *testing.T) {
 		t.Errorf("Run(template export -h) = %d, stdout = %q", code, stdout.String())
 	}
 }
+
+func TestCLITemplateImport(t *testing.T) {
+	t.Setenv("CRUDDING_TEMPLATES_DIR", t.TempDir())
+	templateDir := copyExampleTemplate(t)
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"add", "template", templateDir, "meu-template"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add template) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "export", "meu-template"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template export) exit code = %d, stderr = %q", code, stderr.String())
+	}
+
+	// Em um diretório de templates limpo, importa o .zip diretamente sem perguntas.
+	cleanTemplatesDir := t.TempDir()
+	t.Setenv("CRUDDING_TEMPLATES_DIR", cleanTemplatesDir)
+
+	stdout.Reset()
+	stderr.Reset()
+	zipPath := filepath.Join(tmp, "meu-template.zip")
+	if code := cli.Run([]string{"template", "import", zipPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template import) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, snippet := range []string{"Template meu-template importado com sucesso", "crudding template list", "crudding template use meu-template"} {
+		if !strings.Contains(stdout.String(), snippet) {
+			t.Errorf("stdout de template import não contém %q:\n%s", snippet, stdout.String())
+		}
+	}
+
+	// Usa o template importado para gerar um projeto novo.
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"template", "use", "meu-template", "minha-api"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template use) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	assertFileContains(t, filepath.Join(tmp, "minha-api"), "go.mod", "module minha-api")
+
+	// Importa um .zip com arquivos direto na raiz e sem project.crud.
+	rawZipPath := filepath.Join(tmp, "raw-tmpl.zip")
+	createRawZip(t, rawZipPath, map[string]string{
+		"main.go":   "package main\n",
+		"README.md": "# raw-tmpl\n",
+	})
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"template", "import", rawZipPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(template import raw-tmpl.zip) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if _, err := os.Stat(filepath.Join(cleanTemplatesDir, "raw-tmpl", manifest.FileName)); err != nil {
+		t.Errorf("project.crud não gerado para raw-tmpl: %v", err)
+	}
+
+	// Erros de validação
+	badTraversalZip := filepath.Join(tmp, "evil.zip")
+	createRawZip(t, badTraversalZip, map[string]string{
+		"../fora.txt": "x",
+	})
+	notAZip := filepath.Join(tmp, "invalido.zip")
+	if err := os.WriteFile(notAZip, []byte("nao eh zip"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, testCase := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"template", "import"}, "nenhum arquivo .zip informado"},
+		{[]string{"template", "import", "a.zip", "extra"}, "argumentos inesperados"},
+		{[]string{"template", "import", filepath.Join(tmp, "nao-existe.zip")}, "não encontrado"},
+		{[]string{"template", "import", tmp}, "é um diretório"},
+		{[]string{"template", "import", notAZip}, "abrir arquivo .zip"},
+		{[]string{"template", "import", zipPath}, "já existe"},
+		{[]string{"template", "import", badTraversalZip}, "inválido"},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run(testCase.args, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), testCase.want) {
+			t.Errorf("Run(%v) = %d, stderr = %q, want contendo %q", testCase.args, code, stderr.String(), testCase.want)
+		}
+	}
+
+	stdout.Reset()
+	if code := cli.Run([]string{"template", "import", "-h"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "crudding template import") {
+		t.Errorf("Run(template import -h) = %d, stdout = %q", code, stdout.String())
+	}
+}
+
+func createRawZip(t *testing.T, dest string, files map[string]string) {
+	t.Helper()
+	f, err := os.Create(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	w := zip.NewWriter(f)
+	for name, content := range files {
+		entry, err := w.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
