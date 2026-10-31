@@ -5,40 +5,40 @@
   "framework": "{{.Framework}}",
   "architecture": "clean_arch",
   "vars": {
-    "Name": "user",
-    "Class": "User",
-    "Route": "user",
+    "Name": "template",
+    "Class": "Template",
+    "Route": "template",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.frameworks_and_drivers.web.user_controller",
-      "service": "src.app.interface_adapters.controllers.user_controller",
-      "presenter": "src.app.interface_adapters.presenters.user_presenter",
-      "create": "src.app.application.use_cases.create_user",
-      "delete": "src.app.application.use_cases.delete_user",
-      "get": "src.app.application.use_cases.get_user",
-      "list": "src.app.application.use_cases.list_user",
-      "update": "src.app.application.use_cases.update_user",
-      "port": "src.app.application.port.outbound.user_repository",
-      "adapter": "src.app.interface_adapters.persistence.user_repository",
-      "model": "src.app.domain.model.user"
+      "controller": "src.app.frameworks_and_drivers.web.template_controller",
+      "service": "src.app.interface_adapters.controllers.template_controller",
+      "presenter": "src.app.interface_adapters.presenters.template_presenter",
+      "create": "src.app.application.use_cases.create_template",
+      "delete": "src.app.application.use_cases.delete_template",
+      "get": "src.app.application.use_cases.get_template",
+      "list": "src.app.application.use_cases.list_template",
+      "update": "src.app.application.use_cases.update_template",
+      "port": "src.app.application.port.outbound.template_repository",
+      "adapter": "src.app.interface_adapters.persistence.template_repository",
+      "model": "src.app.domain.model.template"
     }
   },
-  "endpoints": ["user"],
+  "endpoints": ["template"],
   "template_endpoint": {
-    "name": "user",
+    "name": "template",
     "files": [
-      "src/app/frameworks_and_drivers/web/user_controller.py",
-      "src/app/interface_adapters/controllers/user_controller.py",
-      "src/app/interface_adapters/presenters/user_presenter.py",
-      "src/app/application/use_cases/create_user.py",
-      "src/app/application/use_cases/delete_user.py",
-      "src/app/application/use_cases/get_user.py",
-      "src/app/application/use_cases/list_user.py",
-      "src/app/application/use_cases/update_user.py",
-      "src/app/application/port/outbound/user_repository.py",
-      "src/app/interface_adapters/persistence/user_repository.py",
-      "src/app/domain/model/user.py"
+      ".crudding/template/src/app/frameworks_and_drivers/web/template_controller.py",
+      ".crudding/template/src/app/interface_adapters/controllers/template_controller.py",
+      ".crudding/template/src/app/interface_adapters/presenters/template_presenter.py",
+      ".crudding/template/src/app/application/use_cases/create_template.py",
+      ".crudding/template/src/app/application/use_cases/delete_template.py",
+      ".crudding/template/src/app/application/use_cases/get_template.py",
+      ".crudding/template/src/app/application/use_cases/list_template.py",
+      ".crudding/template/src/app/application/use_cases/update_template.py",
+      ".crudding/template/src/app/application/port/outbound/template_repository.py",
+      ".crudding/template/src/app/interface_adapters/persistence/template_repository.py",
+      ".crudding/template/src/app/domain/model/template.py"
     ],
     "register": [
       "src/app/main.py"
@@ -96,47 +96,91 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/frameworks_and_drivers/web/user_controller.py"
+      "to": "src/app/frameworks_and_drivers/web/template_controller.py"
     },
     {
       "from": "architectures/clean_arch/controller.py.tmpl",
-      "to": "src/app/interface_adapters/controllers/user_controller.py"
+      "to": "src/app/interface_adapters/controllers/template_controller.py"
     },
     {
       "from": "architectures/clean_arch/presenter.py.tmpl",
-      "to": "src/app/interface_adapters/presenters/user_presenter.py"
+      "to": "src/app/interface_adapters/presenters/template_presenter.py"
     },
     {
       "from": "architectures/clean_arch/create.py.tmpl",
-      "to": "src/app/application/use_cases/create_user.py"
+      "to": "src/app/application/use_cases/create_template.py"
     },
     {
       "from": "architectures/clean_arch/delete.py.tmpl",
-      "to": "src/app/application/use_cases/delete_user.py"
+      "to": "src/app/application/use_cases/delete_template.py"
     },
     {
       "from": "architectures/clean_arch/get.py.tmpl",
-      "to": "src/app/application/use_cases/get_user.py"
+      "to": "src/app/application/use_cases/get_template.py"
     },
     {
       "from": "architectures/clean_arch/list.py.tmpl",
-      "to": "src/app/application/use_cases/list_user.py"
+      "to": "src/app/application/use_cases/list_template.py"
     },
     {
       "from": "architectures/clean_arch/update.py.tmpl",
-      "to": "src/app/application/use_cases/update_user.py"
+      "to": "src/app/application/use_cases/update_template.py"
     },
     {
       "from": "architectures/common/repository_port.py.tmpl",
-      "to": "src/app/application/port/outbound/user_repository.py"
+      "to": "src/app/application/port/outbound/template_repository.py"
     },
     {
       "from": "architectures/common/repository_adapter.py.tmpl",
-      "to": "src/app/interface_adapters/persistence/user_repository.py"
+      "to": "src/app/interface_adapters/persistence/template_repository.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/domain/model/user.py"
+      "to": "src/app/domain/model/template.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": ".crudding/template/src/app/frameworks_and_drivers/web/template_controller.py"
+    },
+    {
+      "from": "architectures/clean_arch/controller.py.tmpl",
+      "to": ".crudding/template/src/app/interface_adapters/controllers/template_controller.py"
+    },
+    {
+      "from": "architectures/clean_arch/presenter.py.tmpl",
+      "to": ".crudding/template/src/app/interface_adapters/presenters/template_presenter.py"
+    },
+    {
+      "from": "architectures/clean_arch/create.py.tmpl",
+      "to": ".crudding/template/src/app/application/use_cases/create_template.py"
+    },
+    {
+      "from": "architectures/clean_arch/delete.py.tmpl",
+      "to": ".crudding/template/src/app/application/use_cases/delete_template.py"
+    },
+    {
+      "from": "architectures/clean_arch/get.py.tmpl",
+      "to": ".crudding/template/src/app/application/use_cases/get_template.py"
+    },
+    {
+      "from": "architectures/clean_arch/list.py.tmpl",
+      "to": ".crudding/template/src/app/application/use_cases/list_template.py"
+    },
+    {
+      "from": "architectures/clean_arch/update.py.tmpl",
+      "to": ".crudding/template/src/app/application/use_cases/update_template.py"
+    },
+    {
+      "from": "architectures/common/repository_port.py.tmpl",
+      "to": ".crudding/template/src/app/application/port/outbound/template_repository.py"
+    },
+    {
+      "from": "architectures/common/repository_adapter.py.tmpl",
+      "to": ".crudding/template/src/app/interface_adapters/persistence/template_repository.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": ".crudding/template/src/app/domain/model/template.py"
     }
   ]
 }

@@ -1,7 +1,7 @@
 package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
 
 import (
-{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/user"
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/{{.Package}}"
 {{else if eq .Architecture "layered"}}	"{{.GoModule}}/internal/handlers"
 	"{{.GoModule}}/internal/service"
 {{else if eq .Architecture "hexagonal"}}	"{{.GoModule}}/internal/adapters/postgres"
@@ -18,22 +18,22 @@ func SetupRouter() *gin.Engine {
 
 	api := r.Group("/api/v1")
 	{
-{{if eq .Architecture "modular"}}		userSvc := user.NewService()
-		userHandler := user.NewHandler(userSvc)
-{{else if eq .Architecture "layered"}}		userSvc := service.NewUserService()
-		userHandler := handlers.NewUserHandler(userSvc)
-{{else if eq .Architecture "hexagonal"}}		userRepo := postgres.NewUserRepository()
-		userSvc := application.NewUserService(userRepo)
-		userHandler := handlers.NewUserHandler(userSvc)
-{{else if eq .Architecture "clean_arch"}}		userRepo := persistence.NewUserRepository()
-		userSvc := application.NewUserService(userRepo)
-		userHandler := handlers.NewUserHandler(userSvc)
-{{else if eq .Architecture "flat"}}		userSvc := NewUserService()
-		userHandler := NewUserHandler(userSvc)
-{{end}}		api.POST("/users", userHandler.Create)
-		api.GET("/users", userHandler.List)
-		api.GET("/users/:id", userHandler.GetByID)
-		api.DELETE("/users/:id", userHandler.Delete)
+{{if eq .Architecture "modular"}}		{{.VarName}}Svc := {{.Package}}.NewService()
+		{{.VarName}}Handler := {{.Package}}.NewHandler({{.VarName}}Svc)
+{{else if eq .Architecture "layered"}}		{{.VarName}}Svc := service.New{{.Class}}Service()
+		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
+{{else if eq .Architecture "hexagonal"}}		{{.VarName}}Repo := postgres.New{{.Class}}Repository()
+		{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
+		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
+{{else if eq .Architecture "clean_arch"}}		{{.VarName}}Repo := persistence.New{{.Class}}Repository()
+		{{.VarName}}Svc := application.New{{.Class}}Service({{.VarName}}Repo)
+		{{.VarName}}Handler := handlers.New{{.Class}}Handler({{.VarName}}Svc)
+{{else if eq .Architecture "flat"}}		{{.VarName}}Svc := New{{.Class}}Service()
+		{{.VarName}}Handler := New{{.Class}}Handler({{.VarName}}Svc)
+{{end}}		api.POST("/{{.VarName}}s", {{.VarName}}Handler.Create)
+		api.GET("/{{.VarName}}s", {{.VarName}}Handler.List)
+		api.GET("/{{.VarName}}s/:id", {{.VarName}}Handler.GetByID)
+		api.DELETE("/{{.VarName}}s/:id", {{.VarName}}Handler.Delete)
 	}
 
 	return r

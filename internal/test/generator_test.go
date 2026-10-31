@@ -20,11 +20,11 @@ var templates = os.DirFS(filepath.Join("..", ".."))
 // não têm extensão: o runtime (.js/.ts) é acrescentado na checagem.
 var requiredFiles = map[string]map[string][]string{
 	"go": {
-		"flat":       {"main.go", "routes.go", "user_model.go", "user_types.go", "user_service.go", "user_handler.go", "config/config.go"},
-		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/service/user.go", "internal/types/user.go", "internal/models/user.go", "internal/config/config.go"},
-		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/user/handler.go", "internal/user/service.go", "internal/user/types.go", "internal/user/model.go", "internal/config/config.go"},
-		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/user_repository.go", "internal/ports/user_service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/user_types.go", "internal/config/config.go"},
-		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/user_repository.go", "internal/ports/user_service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/user_types.go", "internal/config/config.go"},
+		"flat":       {"main.go", "routes.go", "template_model.go", "template_types.go", "template_service.go", "template_handler.go", ".crudding/template/template_model.go", ".crudding/template/template_handler.go", "config/config.go"},
+		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/template.go", "internal/service/template.go", "internal/types/template.go", "internal/models/template.go", ".crudding/template/internal/handlers/template.go", "internal/config/config.go"},
+		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/template/handler.go", "internal/template/service.go", "internal/template/types.go", "internal/template/model.go", ".crudding/template/internal/handler.go", "internal/config/config.go"},
+		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/template.go", "internal/application/template.go", "internal/ports/template_repository.go", "internal/ports/template_service.go", "internal/adapters/postgres/template.go", "internal/domain/template.go", "internal/domain/template_types.go", ".crudding/template/internal/handlers/template.go", "internal/config/config.go"},
+		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/template.go", "internal/application/template.go", "internal/ports/template_repository.go", "internal/ports/template_service.go", "internal/infrastructure/persistence/template.go", "internal/domain/template.go", "internal/domain/template_types.go", ".crudding/template/internal/handlers/template.go", "internal/config/config.go"},
 	},
 	"node": {
 		"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
@@ -34,27 +34,27 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"setup.py", "src/user_controller.py", "src/user_service.py", "src/user_model.py", "src/main.py", "src/config/config.py"},
-		"layered":    {"src/app/main.py", "src/app/controllers/user_controller.py", "src/app/services/user_service.py", "src/app/models/user.py", "src/app/config/config.py"},
-		"modular":    {"src/app/main.py", "src/app/user/controller.py", "src/app/user/service.py", "src/app/user/models.py", "src/app/config/config.py"},
-		"hexagonal":  {"src/app/main.py", "src/app/routers/user_controller.py", "src/app/application/user_service.py", "src/app/ports/user_repository.py", "src/app/infrastructure/user_repository.py", "src/app/domain/user.py", "src/app/config/config.py"},
-		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/user_controller.py", "src/app/interface_adapters/controllers/user_controller.py", "src/app/interface_adapters/presenters/user_presenter.py", "src/app/application/use_cases/create_user.py", "src/app/application/use_cases/list_user.py", "src/app/application/port/outbound/user_repository.py", "src/app/interface_adapters/persistence/user_repository.py", "src/app/domain/model/user.py", "src/app/config/config.py"},
+		"flat":       {"setup.py", "src/template_controller.py", "src/template_service.py", "src/template_model.py", ".crudding/template/src/template_controller.py", "src/main.py", "src/config/config.py"},
+		"layered":    {"src/app/main.py", "src/app/controllers/template_controller.py", "src/app/services/template_service.py", "src/app/models/template.py", ".crudding/template/src/app/controllers/template_controller.py", "src/app/config/config.py"},
+		"modular":    {"src/app/main.py", "src/app/template/controller.py", "src/app/template/service.py", "src/app/template/models.py", ".crudding/template/src/app/controller.py", "src/app/config/config.py"},
+		"hexagonal":  {"src/app/main.py", "src/app/routers/template_controller.py", "src/app/application/template_service.py", "src/app/ports/template_repository.py", "src/app/infrastructure/template_repository.py", "src/app/domain/template.py", ".crudding/template/src/app/routers/template_controller.py", "src/app/config/config.py"},
+		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/template_controller.py", "src/app/interface_adapters/controllers/template_controller.py", "src/app/interface_adapters/presenters/template_presenter.py", "src/app/application/use_cases/create_template.py", "src/app/application/use_cases/list_template.py", "src/app/application/port/outbound/template_repository.py", "src/app/interface_adapters/persistence/template_repository.py", "src/app/domain/model/template.py", ".crudding/template/src/app/frameworks_and_drivers/web/template_controller.py", "src/app/config/config.py"},
 	},
 }
 
 // Arquivos que NÃO devem existir (camadas removidas propositalmente).
 var forbiddenFiles = map[string]map[string][]string{
 	"go": {
-		"flat":       {"user_repository.go", "tasks.go", "tasks_test.go"},
+		"flat":       {"template_repository.go", "tasks.go", "tasks_test.go"},
 		"layered":    {"routes", "internal/repository", "internal/router"},
-		"modular":    {"routes", "internal/user/repository.go", "internal/router"},
+		"modular":    {"routes", "internal/template/repository.go", "internal/router"},
 		"hexagonal":  {"routes", "cmd/grpc", "internal/adapters/grpc"},
 		"clean_arch": {"routes", "pkg/validator", "migrations"},
 	},
 	"python": {
-		"flat":       {"src/repository.py", "src/user_repository.py"},
-		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/user_repository.py", "src/app/router", "src/app/controllers/api.py"},
-		"modular":    {"src/app/user/repository.py", "src/app/shared/api.py"},
+		"flat":       {"src/repository.py", "src/template_repository.py"},
+		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/template_repository.py", "src/app/router", "src/app/controllers/api.py"},
+		"modular":    {"src/app/template/repository.py", "src/app/shared/api.py"},
 		"hexagonal":  {"src/app/routers/api.py"},
 		"clean_arch": {"src/app/frameworks_and_drivers/web/api.py"},
 	},
@@ -63,11 +63,11 @@ var forbiddenFiles = map[string]map[string][]string{
 // Trechos de código que comprovam que o scaffold genérico foi gerado.
 var codeChecks = map[string]map[string][2]string{
 	"python": {
-		"flat":       {"src/user_model.py", "class User"},
-		"layered":    {"src/app/services/user_service.py", "def list_all"},
-		"modular":    {"src/app/user/service.py", "def list_all"},
-		"hexagonal":  {"src/app/application/user_service.py", "class UserService"},
-		"clean_arch": {"src/app/application/use_cases/create_user.py", "class CreateUser"},
+		"flat":       {"src/template_model.py", "class Template"},
+		"layered":    {"src/app/services/template_service.py", "def list_all"},
+		"modular":    {"src/app/template/service.py", "def list_all"},
+		"hexagonal":  {"src/app/application/template_service.py", "class TemplateService"},
+		"clean_arch": {"src/app/application/use_cases/create_template.py", "class CreateTemplate"},
 	},
 }
 
@@ -235,20 +235,20 @@ class MockHandler:
     def end_headers(self):
         pass
 
-assert "user" in ROUTES, "user route missing"
+assert "template" in ROUTES, "template route missing"
 handler = MockHandler()
-ROUTES["user"](handler, "GET", [])
+ROUTES["template"](handler, "GET", [])
 assert handler.status == 501, f"expected 501, got {handler.status}"
 
 handler = MockHandler()
-ROUTES["user"](handler, "GET", ["1"])
+ROUTES["template"](handler, "GET", ["1"])
 assert handler.status == 501, f"expected 501, got {handler.status}"
 `
 			command := exec.Command(python, "-c", script)
 			command.Dir = destination
 			command.Env = append(os.Environ(), "PYTHONPATH="+destination)
 			if output, err := command.CombinedOutput(); err != nil {
-				t.Fatalf("generated generic user failed: %v\n%s", err, output)
+				t.Fatalf("generated generic template failed: %v\n%s", err, output)
 			}
 		})
 	}
@@ -349,11 +349,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/users", "")
-	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/users/1", "")
+	list := request(http.MethodGet, "/api/v1/templates", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/templates/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"layered": `package main
@@ -371,11 +371,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/users", "")
-	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/users/1", "")
+	list := request(http.MethodGet, "/api/v1/templates", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/templates/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"modular": `package main
@@ -393,11 +393,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/users", "")
-	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/users/1", "")
+	list := request(http.MethodGet, "/api/v1/templates", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/templates/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"hexagonal": `package main
@@ -415,11 +415,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/users", "")
-	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/users/1", "")
+	list := request(http.MethodGet, "/api/v1/templates", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/templates/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"clean_arch": `package main
@@ -437,11 +437,11 @@ func TestDemoAPI(t *testing.T) {
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	created := request(http.MethodPost, "/api/v1/templates", ` + "`" + `{"name":"Alice"}` + "`" + `)
 	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	list := request(http.MethodGet, "/api/v1/users", "")
-	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
-	get := request(http.MethodGet, "/api/v1/users/1", "")
+	list := request(http.MethodGet, "/api/v1/templates", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/templates/1", "")
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 }
@@ -491,23 +491,23 @@ func TestPythonSQLAlchemyGeneration(t *testing.T) {
 			}
 
 			// 3. Checar se o model contém Column e herda de Base
-			modelRel := "src/user_model.py"
+			modelRel := "src/template_model.py"
 			switch arch {
 			case "layered":
-				modelRel = "src/app/models/user.py"
+				modelRel = "src/app/models/template.py"
 			case "modular":
-				modelRel = "src/app/user/models.py"
+				modelRel = "src/app/template/models.py"
 			case "hexagonal":
-				modelRel = "src/app/domain/user.py"
+				modelRel = "src/app/domain/template.py"
 			case "clean_arch":
-				modelRel = "src/app/domain/model/user.py"
+				modelRel = "src/app/domain/model/template.py"
 			}
 			modelBytes, err := os.ReadFile(filepath.Join(destination, modelRel))
 			if err != nil {
 				t.Fatalf("read model file %s: %v", modelRel, err)
 			}
 			modelText := string(modelBytes)
-			if !strings.Contains(modelText, "class User(Base):") || !strings.Contains(modelText, "Column(String, primary_key=True") {
+			if !strings.Contains(modelText, "class Template(Base):") || !strings.Contains(modelText, "Column(String, primary_key=True") {
 				t.Errorf("%s does not contain SQLAlchemy model definition:\n%s", modelRel, modelText)
 			}
 		})

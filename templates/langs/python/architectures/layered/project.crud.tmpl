@@ -5,24 +5,24 @@
   "framework": "{{.Framework}}",
   "architecture": "layered",
   "vars": {
-    "Name": "user",
-    "Class": "User",
-    "Route": "user",
+    "Name": "template",
+    "Class": "Template",
+    "Route": "template",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.controllers.user_controller",
-      "service": "src.app.services.user_service",
-      "model": "src.app.models.user"
+      "controller": "src.app.controllers.template_controller",
+      "service": "src.app.services.template_service",
+      "model": "src.app.models.template"
     }
   },
-  "endpoints": ["user"],
+  "endpoints": ["template"],
   "template_endpoint": {
-    "name": "user",
+    "name": "template",
     "files": [
-      "src/app/controllers/user_controller.py",
-      "src/app/services/user_service.py",
-      "src/app/models/user.py"
+      ".crudding/template/src/app/controllers/template_controller.py",
+      ".crudding/template/src/app/services/template_service.py",
+      ".crudding/template/src/app/models/template.py"
     ],
     "register": [
       "src/app/main.py"
@@ -83,15 +83,27 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/controllers/user_controller.py"
+      "to": "src/app/controllers/template_controller.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/models/user.py"
+      "to": "src/app/models/template.py"
     },
     {
       "from": "architectures/common/service.py.tmpl",
-      "to": "src/app/services/user_service.py"
+      "to": "src/app/services/template_service.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": ".crudding/template/src/app/controllers/template_controller.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": ".crudding/template/src/app/models/template.py"
+    },
+    {
+      "from": "architectures/common/service.py.tmpl",
+      "to": ".crudding/template/src/app/services/template_service.py"
     }
   ]
 }

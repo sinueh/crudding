@@ -6,18 +6,18 @@
   "architecture": "layered",
   "vars": {
     "GoModule": "example.com/{{.ProjectSlug}}",
-    "Package": "user",
-    "VarName": "user",
-    "Class": "User"
+    "Package": "template",
+    "VarName": "template",
+    "Class": "Template"
   },
-  "endpoints": ["user"],
+  "endpoints": ["template"],
   "template_endpoint": {
-    "name": "user",
+    "name": "template",
     "files": [
-      "internal/models/user.go",
-      "internal/types/user.go",
-      "internal/service/user.go",
-      "internal/handlers/user.go"
+      ".crudding/template/internal/models/template.go",
+      ".crudding/template/internal/types/template.go",
+      ".crudding/template/internal/service/template.go",
+      ".crudding/template/internal/handlers/template.go"
     ],
     "register": [
       "internal/routes/routes.go"
@@ -59,19 +59,35 @@
     },
     {
       "from": "frameworks/{{.Framework}}/handler.go.tmpl",
-      "to": "internal/handlers/user.go"
+      "to": "internal/handlers/template.go"
     },
     {
       "from": "architectures/common/model.go.tmpl",
-      "to": "internal/models/user.go"
+      "to": "internal/models/template.go"
     },
     {
       "from": "architectures/common/types.go.tmpl",
-      "to": "internal/types/user.go"
+      "to": "internal/types/template.go"
     },
     {
       "from": "architectures/common/service.go.tmpl",
-      "to": "internal/service/user.go"
+      "to": "internal/service/template.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/handler.go.tmpl",
+      "to": ".crudding/template/internal/handlers/template.go"
+    },
+    {
+      "from": "architectures/common/model.go.tmpl",
+      "to": ".crudding/template/internal/models/template.go"
+    },
+    {
+      "from": "architectures/common/types.go.tmpl",
+      "to": ".crudding/template/internal/types/template.go"
+    },
+    {
+      "from": "architectures/common/service.go.tmpl",
+      "to": ".crudding/template/internal/service/template.go"
     },
     {
       "from": "architectures/common/config.go.tmpl",

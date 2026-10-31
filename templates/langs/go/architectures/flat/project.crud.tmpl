@@ -6,18 +6,18 @@
   "architecture": "flat",
   "vars": {
     "GoModule": "example.com/{{.ProjectSlug}}",
-    "Package": "user",
-    "VarName": "user",
-    "Class": "User"
+    "Package": "template",
+    "VarName": "template",
+    "Class": "Template"
   },
-  "endpoints": ["user"],
+  "endpoints": ["template"],
   "template_endpoint": {
-    "name": "user",
+    "name": "template",
     "files": [
-      "user_model.go",
-      "user_types.go",
-      "user_service.go",
-      "user_handler.go"
+      ".crudding/template/template_model.go",
+      ".crudding/template/template_types.go",
+      ".crudding/template/template_service.go",
+      ".crudding/template/template_handler.go"
     ],
     "register": [
       "routes.go"
@@ -53,19 +53,35 @@
     },
     {
       "from": "frameworks/{{.Framework}}/handler.go.tmpl",
-      "to": "user_handler.go"
+      "to": "template_handler.go"
     },
     {
       "from": "architectures/common/model.go.tmpl",
-      "to": "user_model.go"
+      "to": "template_model.go"
     },
     {
       "from": "architectures/common/types.go.tmpl",
-      "to": "user_types.go"
+      "to": "template_types.go"
     },
     {
       "from": "architectures/common/service.go.tmpl",
-      "to": "user_service.go"
+      "to": "template_service.go"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/handler.go.tmpl",
+      "to": ".crudding/template/template_handler.go"
+    },
+    {
+      "from": "architectures/common/model.go.tmpl",
+      "to": ".crudding/template/template_model.go"
+    },
+    {
+      "from": "architectures/common/types.go.tmpl",
+      "to": ".crudding/template/template_types.go"
+    },
+    {
+      "from": "architectures/common/service.go.tmpl",
+      "to": ".crudding/template/template_service.go"
     },
     {
       "from": "architectures/common/config.go.tmpl",

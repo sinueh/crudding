@@ -5,28 +5,28 @@
   "framework": "{{.Framework}}",
   "architecture": "hexagonal",
   "vars": {
-    "Name": "user",
-    "Class": "User",
-    "Route": "user",
+    "Name": "template",
+    "Class": "Template",
+    "Route": "template",
     "EntryModule": "src.app.main",
     "Modules": {
       "config": "src.app.config.config",
-      "controller": "src.app.routers.user_controller",
-      "service": "src.app.application.user_service",
-      "port": "src.app.ports.user_repository",
-      "adapter": "src.app.infrastructure.user_repository",
-      "model": "src.app.domain.user"
+      "controller": "src.app.routers.template_controller",
+      "service": "src.app.application.template_service",
+      "port": "src.app.ports.template_repository",
+      "adapter": "src.app.infrastructure.template_repository",
+      "model": "src.app.domain.template"
     }
   },
-  "endpoints": ["user"],
+  "endpoints": ["template"],
   "template_endpoint": {
-    "name": "user",
+    "name": "template",
     "files": [
-      "src/app/routers/user_controller.py",
-      "src/app/application/user_service.py",
-      "src/app/ports/user_repository.py",
-      "src/app/infrastructure/user_repository.py",
-      "src/app/domain/user.py"
+      ".crudding/template/src/app/routers/template_controller.py",
+      ".crudding/template/src/app/application/template_service.py",
+      ".crudding/template/src/app/ports/template_repository.py",
+      ".crudding/template/src/app/infrastructure/template_repository.py",
+      ".crudding/template/src/app/domain/template.py"
     ],
     "register": [
       "src/app/main.py"
@@ -97,23 +97,43 @@
     },
     {
       "from": "frameworks/{{.Framework}}/controller.py.tmpl",
-      "to": "src/app/routers/user_controller.py"
+      "to": "src/app/routers/template_controller.py"
     },
     {
       "from": "architectures/hexagonal/service.py.tmpl",
-      "to": "src/app/application/user_service.py"
+      "to": "src/app/application/template_service.py"
     },
     {
       "from": "architectures/common/repository_port.py.tmpl",
-      "to": "src/app/ports/user_repository.py"
+      "to": "src/app/ports/template_repository.py"
     },
     {
       "from": "architectures/common/repository_adapter.py.tmpl",
-      "to": "src/app/infrastructure/user_repository.py"
+      "to": "src/app/infrastructure/template_repository.py"
     },
     {
       "from": "architectures/common/model.py.tmpl",
-      "to": "src/app/domain/user.py"
+      "to": "src/app/domain/template.py"
+    },
+    {
+      "from": "frameworks/{{.Framework}}/controller.py.tmpl",
+      "to": ".crudding/template/src/app/routers/template_controller.py"
+    },
+    {
+      "from": "architectures/hexagonal/service.py.tmpl",
+      "to": ".crudding/template/src/app/application/template_service.py"
+    },
+    {
+      "from": "architectures/common/repository_port.py.tmpl",
+      "to": ".crudding/template/src/app/ports/template_repository.py"
+    },
+    {
+      "from": "architectures/common/repository_adapter.py.tmpl",
+      "to": ".crudding/template/src/app/infrastructure/template_repository.py"
+    },
+    {
+      "from": "architectures/common/model.py.tmpl",
+      "to": ".crudding/template/src/app/domain/template.py"
     }
   ]
 }

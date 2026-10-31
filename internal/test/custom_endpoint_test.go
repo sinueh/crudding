@@ -166,8 +166,8 @@ func TestCustomEndpointRejectsInvalidSpecs(t *testing.T) {
 func TestCustomEndpointOverridesBuiltinLayout(t *testing.T) {
 	root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "go", Framework: "gin", Architecture: "layered"})
 	m.TemplateEndpoint = manifest.EndpointSpec{
-		Name:     "user",
-		Files:    []string{"internal/handlers/user.go", "internal/service/user.go"},
+		Name:     "template",
+		Files:    []string{".crudding/template/internal/handlers/template.go", ".crudding/template/internal/service/template.go"},
 		Register: []string{"internal/routes/routes.go"},
 	}
 	if err := manifest.Write(root, m); err != nil {

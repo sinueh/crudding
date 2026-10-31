@@ -97,7 +97,7 @@ func EndpointRemovalPlan(root string, m manifest.Manifest, name string) (common.
 	for _, file := range files {
 		plan.Files = append(plan.Files, file.output)
 		// Só as pastas cujo caminho mudou com o nome (ex.: internal/invoice).
-		for source, output := path.Dir(file.source), path.Dir(file.output); output != source; source, output = path.Dir(source), path.Dir(output) {
+		for source, output := path.Dir(file.target), path.Dir(file.output); output != source; source, output = path.Dir(source), path.Dir(output) {
 			if !slices.Contains(plan.Directories, output) {
 				plan.Directories = append(plan.Directories, output)
 			}
@@ -133,7 +133,7 @@ type endpointRecipe struct {
 	others []string
 }
 
-type endpointFile struct{ source, output string }
+type endpointFile struct{ source, target, output string }
 
 func newEndpointRecipe(m manifest.Manifest, name string) (endpointRecipe, error) {
 	if err := CheckEndpoint(m); err != nil {
@@ -179,15 +179,28 @@ func newEndpointRecipe(m manifest.Manifest, name string) (endpointRecipe, error)
 // outputs liga cada arquivo do exemplo ao caminho do arquivo novo.
 func (r endpointRecipe) outputs() ([]endpointFile, error) {
 	files := make([]endpointFile, len(r.spec.Files))
+	prefix := ".crudding/" + r.spec.Name + "/"
 	for index, source := range r.spec.Files {
-		output := r.rename.Replace(source)
+		var target string
+		switch {
+		case strings.HasPrefix(source, prefix):
+			target = strings.TrimPrefix(source, prefix)
+			if r.rename.Replace(target) == target {
+				target = path.Join(path.Dir(target), r.spec.Name, path.Base(target))
+			}
+		case strings.HasPrefix(source, ".crudding/"):
+			target = strings.TrimPrefix(source, ".crudding/")
+		default:
+			target = source
+		}
+		output := r.rename.Replace(target)
 		if err := checkPaths(source, output); err != nil {
 			return nil, fmt.Errorf("endpoint.files: %w", err)
 		}
-		if output == source {
+		if output == target {
 			return nil, fmt.Errorf("endpoint.files: %s não contém o nome do exemplo %q, então o arquivo novo teria o mesmo caminho", source, r.spec.Name)
 		}
-		files[index] = endpointFile{source: source, output: output}
+		files[index] = endpointFile{source: source, target: target, output: output}
 	}
 	return files, nil
 }

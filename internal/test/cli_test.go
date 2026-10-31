@@ -614,8 +614,8 @@ func TestCLIInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("manifest.Find() error = %v", err)
 	}
-	if len(m.Endpoints) != 2 || m.Endpoints[0] != "user" || m.Endpoints[1] != "product" {
-		t.Fatalf("manifest.Endpoints = %v, want [user product]", m.Endpoints)
+	if len(m.Endpoints) != 2 || m.Endpoints[0] != "template" || m.Endpoints[1] != "product" {
+		t.Fatalf("manifest.Endpoints = %v, want [template product]", m.Endpoints)
 	}
 
 	stdout.Reset()
@@ -632,7 +632,7 @@ func TestCLIInfo(t *testing.T) {
 		"Framework: gin",
 		"Arquitetura: hexagonal",
 		"Endpoints (2):",
-		"  - user",
+		"  - template",
 		"  - product",
 	} {
 		if !strings.Contains(got, want) {
@@ -705,7 +705,7 @@ func TestCLIInfoDraw(t *testing.T) {
 		"HEXAGON CORE",
 		"Driven Adapter",
 		"internal/adapters/postgres",
-		"Endpoints: user",
+		"Endpoints: template",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("Run(info draw) stdout missing %q:\n%s", want, got)

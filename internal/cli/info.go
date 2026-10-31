@@ -367,7 +367,7 @@ func drawModularASCII(m manifest.Manifest) string {
 		sliceItems = "routes -> controller -> service -> model"
 	}
 
-	firstMod := "user"
+	firstMod := "template"
 	secondMod := "<feature>"
 	if len(m.Endpoints) >= 1 {
 		firstMod = m.Endpoints[0]

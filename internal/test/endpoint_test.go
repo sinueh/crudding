@@ -180,7 +180,7 @@ func TestAddEndpointRejections(t *testing.T) {
 	}{
 		{pythonRoot, pythonManifest, "class", "palavra reservada"},
 		{goRoot, goManifest, "func", "palavra reservada"},
-		{pythonRoot, pythonManifest, "user", "endpoint de exemplo"},
+		{pythonRoot, pythonManifest, "template", "endpoint de exemplo"},
 		{nodeRoot, nodeManifest, "invoice", `campo "template_endpoint"`},
 	} {
 		if _, err := generator.AddEndpoint(testCase.root, testCase.m, testCase.name); err == nil || !strings.Contains(err.Error(), testCase.want) {
@@ -206,7 +206,7 @@ func TestAddEndpointRejections(t *testing.T) {
 		want string
 	}{
 		{pythonRoot, pythonManifest, "nonexistent", "não encontrado"},
-		{pythonRoot, pythonManifest, "user", "endpoint de exemplo"},
+		{pythonRoot, pythonManifest, "template", "endpoint de exemplo"},
 		{nodeRoot, nodeManifest, "invoice", `campo "template_endpoint"`},
 	} {
 		if _, err := generator.RemoveEndpoint(testCase.root, testCase.m, testCase.name); err == nil || !strings.Contains(err.Error(), testCase.want) {
@@ -225,7 +225,7 @@ func TestAddEndpointWithoutSampleRegistrationChangesNothing(t *testing.T) {
 	}
 	var kept []string
 	for _, line := range strings.Split(string(content), "\n") {
-		if !strings.Contains(line, "user") {
+		if !strings.Contains(line, "template") {
 			kept = append(kept, line)
 		}
 	}
