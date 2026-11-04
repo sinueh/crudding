@@ -20,7 +20,7 @@ description: Scaffold de APIs (Go, Python, Node) e CRUD tipado com o CLI cruddin
 - Sempre passe argumentos (sem argumentos o CLI abre o menu interativo).
 
 ## Outros comandos
-`crudding remove endpoint <nome>` · `crudding add db <banco>` · `crudding info draw` · `crudding template --help` · `crudding <cmd> --help`
+`crudding remove endpoint <nome>` · `crudding add db <banco>` · `crudding add skill` · `crudding info draw` · `crudding template --help` · `crudding <cmd> --help`
 
 ## Referências (ler apenas se necessário)
 - [references/fields.md](references/fields.md) — tipos, chaves estrangeiras (`ref`), migrações e restrições de campos tipados.
