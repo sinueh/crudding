@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -450,7 +451,6 @@ func TestCLIAddDBHelp(t *testing.T) {
 	}
 }
 
-
 func TestCLIRemoveEndpoint(t *testing.T) {
 	tmp := t.TempDir()
 	chdirTemp(t, tmp)
@@ -523,7 +523,6 @@ func TestCLIRemoveEndpoint(t *testing.T) {
 		}
 	}
 }
-
 
 func TestCLIStacks(t *testing.T) {
 	var stdout, stderr bytes.Buffer
@@ -1064,5 +1063,20 @@ func createRawZip(t *testing.T, dest string, files map[string]string) {
 	}
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCommandsBuild(t *testing.T) {
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		t.Skip("go não encontrado no PATH")
+	}
+	outDir := t.TempDir()
+	for _, entrypoint := range []string{"./cmd/crudding", "./cmd/crd"} {
+		cmd := exec.Command(goBin, "build", "-o", outDir, entrypoint)
+		cmd.Dir = "../.."
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("falha ao compilar %s: %v\n%s", entrypoint, err, string(out))
+		}
 	}
 }
