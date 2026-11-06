@@ -75,6 +75,35 @@ func (h *{{if eq .Architecture "modular"}}Handler{{else}}{{.Class}}Handler{{end}
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+func (h *{{if eq .Architecture "modular"}}Handler{{else}}{{.Class}}Handler{{end}}) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "id inválido"})
+		return
+	}
+
+	var req {{if eq .Architecture "layered"}}types.{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}domain.{{end}}Create{{.Class}}Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	res, err := h.svc.Update(uint(id), req)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "{{.VarName}} não encontrado"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(res)
+}
+
 func (h *{{if eq .Architecture "modular"}}Handler{{else}}{{.Class}}Handler{{end}}) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
 	if err != nil {

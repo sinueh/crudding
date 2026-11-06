@@ -35,6 +35,7 @@ func SetupRouter(dbs ...*sql.DB) *gin.Engine {
 {{end}}		api.POST("/{{.VarName}}", {{.VarName}}Handler.Create)
 		api.GET("/{{.VarName}}", {{.VarName}}Handler.List)
 		api.GET("/{{.VarName}}/:id", {{.VarName}}Handler.GetByID)
+		api.PATCH("/{{.VarName}}/:id", {{.VarName}}Handler.Update)
 		api.DELETE("/{{.VarName}}/:id", {{.VarName}}Handler.Delete)
 	}
 

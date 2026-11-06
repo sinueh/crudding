@@ -101,6 +101,28 @@ func (r *{{.VarName}}Repository) FindByID(id uint) (*domain.{{.Class}}, error) {
 	return &item, nil
 }
 
+func (r *{{.VarName}}Repository) Update({{.VarName}} *domain.{{.Class}}) error {
+	if r.db != nil {
+		res, err := r.db.Exec("UPDATE {{.VarName}} SET name = {{if eq .Database "mysql"}}?{{else}}$1{{end}} WHERE id = {{if eq .Database "mysql"}}?{{else}}$2{{end}}", {{.VarName}}.Name, {{.VarName}}.ID)
+		if err != nil {
+			return err
+		}
+		if affected, err := res.RowsAffected(); err == nil && affected == 0 {
+			return Err{{.Class}}NotFound
+		}
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.items[{{.VarName}}.ID]; !exists {
+		return Err{{.Class}}NotFound
+	}
+	r.items[{{.VarName}}.ID] = *{{.VarName}}
+	return nil
+}
+
 func (r *{{.VarName}}Repository) Delete(id uint) error {
 	if r.db != nil {
 		res, err := r.db.Exec("DELETE FROM {{.VarName}} WHERE id = $1", id)
