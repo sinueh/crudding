@@ -1,0 +1,10 @@
+from {{.Modules.model}} import {{.Class}}, {{.Class}}In
+
+
+class Create{{.Class}}:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def execute(self, data: dict) -> {{.Class}}:
+        valid = {{.Class}}In.model_validate(data).model_dump()
+        return self.repository.save({{.Class}}(**valid))

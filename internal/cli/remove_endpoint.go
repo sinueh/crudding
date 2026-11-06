@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/sinueh/crudding"
 	"github.com/sinueh/crudding/internal/generator"
 	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/manifest"
@@ -111,11 +112,15 @@ func runRemoveEndpoint(args []string, stdout, _ io.Writer) error {
 		}
 	}
 
-	result, err := generator.RemoveEndpoint(root, m, name)
+	typed := len(m.EndpointFields[name]) > 0
+	result, err := generator.RemoveTypedEndpoint(root, m, name, crudding.Templates)
 	if err != nil {
 		return err
 	}
 	printRemoveEndpointSummary(stdout, name, result)
+	if typed {
+		fmt.Fprintf(stdout, "  aviso      as migrações de %s em migrations/ foram mantidas (não dá para saber se já foram aplicadas); apague-as ou crie uma migração de DROP TABLE\n", name)
+	}
 	return nil
 }
 

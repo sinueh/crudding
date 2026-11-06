@@ -266,3 +266,15 @@ func readRegular(fsys fs.FS, name string) ([]byte, error) {
 	}
 	return fs.ReadFile(fsys, name)
 }
+
+// EndpointRenamer devolve a troca de nomes que o "add endpoint name" aplica
+// aos arquivos copiados do exemplo (snake, kebab, Pascal e camelCase), para
+// quem gera o conteúdo do endpoint por outro caminho (ex.: campos tipados)
+// produzir os mesmos identificadores das linhas de register.
+func EndpointRenamer(m manifest.Manifest, name string) (func(string) string, error) {
+	recipe, err := newEndpointRecipe(m, name)
+	if err != nil {
+		return nil, err
+	}
+	return recipe.rename.Replace, nil
+}

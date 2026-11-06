@@ -1,0 +1,46 @@
+package {{if eq .Architecture "modular"}}{{.Package}}{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}domain{{else if eq .Architecture "flat"}}main{{else}}types{{end}}
+
+import (
+{{- range .Endpoint.GoTypesImports }}
+	"{{.}}"
+{{- end }}
+)
+{{- if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch") }}
+{{ template "go-errors" . }}
+{{- end }}
+
+// Create{{.Class}}Request é o corpo do POST: campos obrigatórios não podem faltar.
+type Create{{.Class}}Request struct {
+{{- range .Fields }}
+	{{.GoName}} *{{.GoType}} {{.GoTag}}
+{{- end }}
+}
+
+func (r Create{{.Class}}Request) Validate() error {
+{{- range .Fields }}{{ if .Required }}
+	if r.{{.GoName}} == nil {
+		return errors.New("{{.Column}} é obrigatório")
+	}
+{{- end }}{{ end }}
+{{- template "go-checks" . }}
+	return nil
+}
+
+// Update{{.Class}}Request é o corpo do PATCH: só os campos enviados mudam.
+type Update{{.Class}}Request struct {
+{{- range .Fields }}
+	{{.GoName}} *{{.GoType}} {{.GoTag}}
+{{- end }}
+}
+
+func (r Update{{.Class}}Request) Validate() error {
+{{- template "go-checks" . }}
+	return nil
+}
+
+type {{.Class}}Response struct {
+	ID uint `json:"id"`
+{{- range .Fields }}
+	{{.GoName}} {{.GoModelType}} {{.GoTag}}
+{{- end }}
+}

@@ -1,0 +1,119 @@
+{{- $h := include "handler" . }}{{ $tq := include "tq" . }}{{ $eq := include "errq" . -}}
+package {{ template "pkg-handler" . }}
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+
+{{if eq .Architecture "layered"}}	"{{.GoModule}}/internal/service"
+	"{{.GoModule}}/internal/types"
+{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+{{end}}	"github.com/gin-gonic/gin"
+)
+
+type {{$h}} struct {
+	svc {{ template "iface" . }}
+}
+
+func New{{$h}}(svc {{ template "iface" . }}) *{{$h}} {
+	return &{{$h}}{svc: svc}
+}
+
+// fail responde 404, 409 ou 500 conforme o erro do service.
+func (h *{{$h}}) fail(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, {{$eq}}{{ template "notfound" . }}):
+		c.JSON(http.StatusNotFound, gin.H{"error": "{{.VarName}} não encontrado"})
+	case errors.Is(err, {{$eq}}{{ template "conflict" . }}):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno"})
+	}
+}
+
+func (h *{{$h}}) id(c *gin.Context) (uint, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+func (h *{{$h}}) Create(c *gin.Context) {
+	var req {{$tq}}Create{{.Class}}Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	res, err := h.svc.Create(req)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, res)
+}
+
+func (h *{{$h}}) List(c *gin.Context) {
+	res, err := h.svc.List()
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *{{$h}}) GetByID(c *gin.Context) {
+	id, ok := h.id(c)
+	if !ok {
+		return
+	}
+	res, err := h.svc.GetByID(id)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *{{$h}}) Update(c *gin.Context) {
+	id, ok := h.id(c)
+	if !ok {
+		return
+	}
+	var req {{$tq}}Update{{.Class}}Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	res, err := h.svc.Update(id, req)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *{{$h}}) Delete(c *gin.Context) {
+	id, ok := h.id(c)
+	if !ok {
+		return
+	}
+	if err := h.svc.Delete(id); err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

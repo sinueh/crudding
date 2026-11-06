@@ -1,0 +1,40 @@
+package {{if eq .Architecture "hexagonal"}}postgres{{else if eq .Architecture "clean_arch"}}persistence{{end}}
+
+import (
+{{- template "go-store-imports" . }}
+{{- if eq .Endpoint.Store "sql" }}
+	"errors"
+{{- end }}
+
+	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+)
+
+type {{.VarName}}Repository struct {
+{{- template "go-store-fields" (dict "D" . "M" (printf "domain.%s" .Class)) }}
+}
+
+func New{{.Class}}Repository(dbs ...*sql.DB) ports.{{.Class}}Repository {
+{{- template "go-store-new" (dict "D" . "Recv" (printf "%sRepository" .VarName) "M" (printf "domain.%s" .Class)) }}
+}
+
+func (r *{{.VarName}}Repository) Create({{.VarName}} *domain.{{.Class}}) error {
+	return r.insert({{.VarName}})
+}
+
+func (r *{{.VarName}}Repository) FindAll() ([]domain.{{.Class}}, error) {
+	return r.findAll()
+}
+
+func (r *{{.VarName}}Repository) FindByID(id uint) (*domain.{{.Class}}, error) {
+	return r.find(id)
+}
+
+func (r *{{.VarName}}Repository) Update({{.VarName}} *domain.{{.Class}}) error {
+	return r.save({{.VarName}})
+}
+
+func (r *{{.VarName}}Repository) Delete(id uint) error {
+	return r.remove(id)
+}
+{{ template "go-store" (dict "D" . "Recv" (printf "%sRepository" .VarName) "M" (printf "domain.%s" .Class) "NotFound" (printf "domain.Err%sNotFound" .Class) "Conflict" (printf "domain.Err%sConflict" .Class)) }}

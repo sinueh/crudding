@@ -2,10 +2,13 @@ package generator
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
+	"slices"
 
 	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/generator/custom"
+	"github.com/sinueh/crudding/internal/generator/fields"
 	"github.com/sinueh/crudding/internal/manifest"
 )
 
@@ -48,6 +51,14 @@ func AddEndpoint(root string, m manifest.Manifest, name string) (common.Result, 
 // RemoveEndpoint desfaz o AddEndpoint de name: remove as cópias do endpoint de
 // exemplo e as linhas de registro, e atualiza o project.crud.
 func RemoveEndpoint(root string, m manifest.Manifest, name string) (common.RemoveResult, error) {
+	return RemoveTypedEndpoint(root, m, name, nil)
+}
+
+// RemoveTypedEndpoint é o RemoveEndpoint que também apaga os arquivos extras
+// (ex.: testes) de um endpoint criado com campos tipados, listados pelos
+// templates da linguagem. As migrações ficam: não dá para saber se já foram
+// aplicadas. Recusa remover um endpoint referenciado por campos ref de outro.
+func RemoveTypedEndpoint(root string, m manifest.Manifest, name string, templates fs.FS) (common.RemoveResult, error) {
 	m = current(root, m)
 	if err := CheckEndpointSupport(m); err != nil {
 		return common.RemoveResult{}, err
@@ -55,10 +66,23 @@ func RemoveEndpoint(root string, m manifest.Manifest, name string) (common.Remov
 	if !m.HasEndpoint(name) {
 		return common.RemoveResult{}, fmt.Errorf("endpoint %q não encontrado em %s", name, manifest.FileName)
 	}
+	for other, specs := range m.EndpointFields {
+		if other == name {
+			continue
+		}
+		if list, err := fields.Parse(specs); err == nil && slices.Contains(fields.Refs(list), name) {
+			return common.RemoveResult{}, fmt.Errorf("o endpoint %q é referenciado pelo campo %s:ref do endpoint %q; remova %q antes", name, name, other, other)
+		}
+	}
 	plan, err := custom.EndpointRemovalPlan(root, m, name)
 	if err != nil {
 		return common.RemoveResult{}, err
 	}
+	extras, err := typedEndpointExtras(root, m, name, templates)
+	if err != nil {
+		return common.RemoveResult{}, err
+	}
+	plan.Files = append(plan.Files, extras...)
 	result, err := common.Remove(root, plan)
 	if err != nil {
 		return common.RemoveResult{}, err

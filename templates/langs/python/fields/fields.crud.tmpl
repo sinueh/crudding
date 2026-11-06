@@ -1,0 +1,11 @@
+{
+  "files": [
+{{- if eq .Framework "fastapi" }}
+    { "from": "tests/test_endpoint.py.tmpl", "to": "tests/test_{{.Name}}.py" }
+{{- end }}
+  ],
+  "packages": [{{if eq .Framework "fastapi"}}"tests"{{end}}],
+  "append": [
+    { "into": "requirements.txt", "from": "requirements.txt.tmpl" }
+  ]
+}

@@ -1,0 +1,21 @@
+from abc import ABC, abstractmethod
+
+from {{.Modules.model}} import {{.Class}}
+
+
+class {{.Class}}Repository(ABC):
+    @abstractmethod
+    def save(self, item: {{.Class}}) -> {{.Class}}:
+        """Insere (id None) ou atualiza o registro e devolve o item com id."""
+
+    @abstractmethod
+    def find_by_id(self, item_id: int) -> {{.Class}} | None:
+        """Devolve o registro ou None se ele não existe."""
+
+    @abstractmethod
+    def find_all(self) -> list[{{.Class}}]:
+        """Devolve todos os registros, ordenados por id."""
+
+    @abstractmethod
+    def delete(self, item_id: int) -> bool:
+        """Remove o registro; False se ele não existe."""

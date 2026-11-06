@@ -32,6 +32,11 @@ type Manifest struct {
 	Framework    string   `json:"framework"`
 	Architecture string   `json:"architecture"`
 	Endpoints    []string `json:"endpoints"`
+	// EndpointFields guarda os campos tipados de cada endpoint criado com
+	// "crudding add endpoint <nome> campo:tipo...", na sintaxe da linha de
+	// comando (ex.: "price:decimal", "image_url:str?", "cart:ref"). Endpoints
+	// sem campos não aparecem aqui.
+	EndpointFields map[string][]string `json:"endpoint_fields,omitempty"`
 	// TemplateEndpoint, quando preenchido, define como "crudding add/remove endpoint"
 	// cria e remove recursos neste projeto, no lugar do layout da arquitetura.
 	TemplateEndpoint EndpointSpec `json:"template_endpoint"`
@@ -142,12 +147,27 @@ func (m *Manifest) AddEndpoint(name string) {
 }
 
 func (m *Manifest) RemoveEndpoint(name string) bool {
+	delete(m.EndpointFields, name)
+	if len(m.EndpointFields) == 0 {
+		m.EndpointFields = nil
+	}
 	idx := slices.Index(m.Endpoints, name)
 	if idx < 0 {
 		return false
 	}
 	m.Endpoints = slices.Delete(m.Endpoints, idx, idx+1)
 	return true
+}
+
+// SetEndpointFields grava os campos tipados do endpoint name.
+func (m *Manifest) SetEndpointFields(name string, specs []string) {
+	if len(specs) == 0 {
+		return
+	}
+	if m.EndpointFields == nil {
+		m.EndpointFields = map[string][]string{}
+	}
+	m.EndpointFields[name] = slices.Clone(specs)
 }
 
 func (m Manifest) HasEndpoint(name string) bool {

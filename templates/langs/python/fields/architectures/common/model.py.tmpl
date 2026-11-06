@@ -1,0 +1,49 @@
+{{- range .Endpoint.PyImports }}
+{{.}}
+{{- end }}
+from dataclasses import dataclass
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class {{.Class}}ConflictError(Exception):
+    """O banco recusou a operação (ex.: referência inexistente ou registro em uso)."""
+
+
+@dataclass
+class {{.Class}}:
+{{- range .Fields }}{{ if .Required }}
+    {{.EntityDecl}}
+{{- end }}{{ end }}
+{{- range .Fields }}{{ if .Nullable }}
+    {{.EntityDecl}}
+{{- end }}{{ end }}
+    id: int | None = None
+
+
+class {{.Class}}In(BaseModel):
+{{- range .Fields }}
+    {{.InDecl}}
+{{- end }}
+
+
+class {{.Class}}Patch(BaseModel):
+{{- range .Fields }}
+    {{.PatchDecl}}
+{{- end }}
+{{- if .Endpoint.HasRequired }}
+
+    @field_validator({{.Endpoint.PyRequiredColumns}})
+    @classmethod
+    def _required_not_null(cls, value):
+        if value is None:
+            raise ValueError("may not be null")
+        return value
+{{- end }}
+
+
+class {{.Class}}Out(BaseModel):
+    id: int
+{{- range .Fields }}
+    {{.OutDecl}}
+{{- end }}

@@ -1,0 +1,46 @@
+from dataclasses import asdict
+
+from {{.Modules.model}} import {{.Class}}, {{.Class}}In, {{.Class}}Out, {{.Class}}Patch
+from {{.Modules.port}} import {{.Class}}Repository
+from {{.Modules.adapter}} import {{.Class}}RepositoryAdapter
+
+
+def _present(item: {{.Class}}) -> dict:
+    return {{.Class}}Out.model_validate(asdict(item)).model_dump(mode="json")
+
+
+class {{.Class}}Service:
+    def __init__(self, repository: {{.Class}}Repository):
+        self.repository = repository
+
+    def list_all(self) -> list[dict]:
+        return [_present(item) for item in self.repository.find_all()]
+
+    def get(self, item_id: int) -> dict | None:
+        item = self.repository.find_by_id(item_id)
+        return _present(item) if item is not None else None
+
+    def create(self, payload: dict) -> dict:
+        data = {{.Class}}In.model_validate(payload).model_dump()
+        return _present(self.repository.save({{.Class}}(**data)))
+
+    def update(self, item_id: int, payload: dict) -> dict | None:
+        changes = {{.Class}}Patch.model_validate(payload).model_dump(exclude_unset=True)
+        item = self.repository.find_by_id(item_id)
+        if item is None:
+            return None
+        for column, value in changes.items():
+            setattr(item, column, value)
+        return _present(self.repository.save(item))
+
+    def delete(self, item_id: int) -> bool:
+        return self.repository.delete(item_id)
+
+
+_service = {{.Class}}Service({{.Class}}RepositoryAdapter())
+
+list_all = _service.list_all
+get = _service.get
+create = _service.create
+update = _service.update
+delete = _service.delete

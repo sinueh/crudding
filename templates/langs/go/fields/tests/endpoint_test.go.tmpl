@@ -1,0 +1,62 @@
+package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
+
+import (
+	"encoding/json"
+	"fmt"
+{{- if eq .Framework "fiber" }}
+	"io"
+{{- end }}
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+// Test{{.Class}}CRUD exercita as rotas de {{.VarName}} com o armazenamento em memória (sem banco).
+func Test{{.Class}}CRUD(t *testing.T) {
+	router := SetupRouter()
+	request := func(method, path, body string) (int, string) {
+		t.Helper()
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+{{- if eq .Framework "fiber" }}
+		res, err := router.Test(req, -1)
+		if err != nil {
+			t.Fatalf("%s %s: %v", method, path, err)
+		}
+		defer res.Body.Close()
+		data, _ := io.ReadAll(res.Body)
+		return res.StatusCode, string(data)
+{{- else }}
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+		return recorder.Code, recorder.Body.String()
+{{- end }}
+	}
+	expect := func(method, path, body string, want int) string {
+		t.Helper()
+		code, response := request(method, path, body)
+		if code != want {
+			t.Fatalf("%s %s = %d, want %d: %s", method, path, code, want, response)
+		}
+		return response
+	}
+
+	base := "/api/v1/{{.VarName}}"
+{{- if .Endpoint.HasRequired }}
+	expect(http.MethodPost, base, `{}`, http.StatusBadRequest)
+{{- end }}
+	var created struct {
+		ID uint `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(expect(http.MethodPost, base, {{.Endpoint.SampleJSON}}, http.StatusCreated)), &created); err != nil {
+		t.Fatal(err)
+	}
+	item := fmt.Sprintf("%s/%d", base, created.ID)
+
+	expect(http.MethodGet, item, "", http.StatusOK)
+	expect(http.MethodGet, base, "", http.StatusOK)
+	expect(http.MethodPatch, item, {{.Endpoint.UpdateJSON}}, http.StatusOK)
+	expect(http.MethodDelete, item, "", http.StatusNoContent)
+	expect(http.MethodGet, item, "", http.StatusNotFound)
+}

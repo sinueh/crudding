@@ -1,0 +1,37 @@
+{{ template "py-store-imports" . }}
+from {{.Modules.model}} import {{.Class}}ConflictError, {{.Class}}In, {{.Class}}Out, {{.Class}}Patch
+
+
+{{ template "py-store" . }}
+
+
+def _present(row: dict) -> dict:
+    return {{.Class}}Out.model_validate(row).model_dump(mode="json")
+
+
+def list_all() -> list[dict]:
+    return [_present(row) for row in _select_all()]
+
+
+def get(item_id: int) -> dict | None:
+    row = _select_one(item_id)
+    return _present(row) if row is not None else None
+
+
+def create(payload: dict) -> dict:
+    data = {{.Class}}In.model_validate(payload).model_dump()
+    return get(_insert(data))
+
+
+def update(item_id: int, payload: dict) -> dict | None:
+    changes = {{.Class}}Patch.model_validate(payload).model_dump(exclude_unset=True)
+    row = _select_one(item_id)
+    if row is None:
+        return None
+    row.update(changes)
+    _update(item_id, row)
+    return get(item_id)
+
+
+def delete(item_id: int) -> bool:
+    return _delete(item_id)

@@ -1,0 +1,28 @@
+{{ template "py-store-imports" . }}
+from {{.Modules.model}} import {{.Class}}, {{.Class}}ConflictError
+from {{.Modules.port}} import {{.Class}}Repository
+
+
+{{ template "py-store" . }}
+
+
+class {{.Class}}RepositoryAdapter({{.Class}}Repository):
+    """Adapter de persistência de {{.Class}}."""
+
+    def save(self, item: {{.Class}}) -> {{.Class}}:
+        data = {column: getattr(item, column) for column in _COLUMNS}
+        if item.id is None:
+            item.id = _insert(data)
+        else:
+            _update(item.id, data)
+        return item
+
+    def find_by_id(self, item_id: int) -> {{.Class}} | None:
+        row = _select_one(item_id)
+        return {{.Class}}(**row) if row is not None else None
+
+    def find_all(self) -> list[{{.Class}}]:
+        return [{{.Class}}(**row) for row in _select_all()]
+
+    def delete(self, item_id: int) -> bool:
+        return _delete(item_id)

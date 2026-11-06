@@ -1,0 +1,15 @@
+from {{.Modules.model}} import {{.Class}}, {{.Class}}Patch
+
+
+class Update{{.Class}}:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def execute(self, item_id: int, data: dict) -> {{.Class}} | None:
+        changes = {{.Class}}Patch.model_validate(data).model_dump(exclude_unset=True)
+        item = self.repository.find_by_id(item_id)
+        if item is None:
+            return None
+        for column, value in changes.items():
+            setattr(item, column, value)
+        return self.repository.save(item)
