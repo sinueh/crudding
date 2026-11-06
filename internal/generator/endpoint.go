@@ -83,6 +83,11 @@ func RemoveTypedEndpoint(root string, m manifest.Manifest, name string, template
 		return common.RemoveResult{}, err
 	}
 	plan.Files = append(plan.Files, extras...)
+	if name == m.TemplateEndpoint.Name {
+		if err := custom.BackupRegister(root, &m); err != nil {
+			return common.RemoveResult{}, err
+		}
+	}
 	result, err := common.Remove(root, plan)
 	if err != nil {
 		return common.RemoveResult{}, err

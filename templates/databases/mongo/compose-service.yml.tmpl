@@ -9,3 +9,4 @@ mongo:
     - "${DB_PORT:-27017}:27017"
   volumes:
     - mongo_data:/data/db
+    - ./migrations:/docker-entrypoint-initdb.d:ro

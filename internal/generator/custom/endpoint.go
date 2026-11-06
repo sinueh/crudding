@@ -74,17 +74,103 @@ func EndpointPatch(root string, m manifest.Manifest, name string) (common.Patch,
 		}
 		patch.Rewrites = append(patch.Rewrites, common.Rewrite{
 			Path: target,
-			Edit: func(content []byte) ([]byte, error) { return recipe.duplicateLines(target, content) },
+			Edit: func(content []byte) ([]byte, error) { return recipe.registerLines(root, m, target, name, content) },
 		})
 	}
 	return patch, nil
+}
+
+// BackupRegister salva uma cópia limpa dos arquivos de register em
+// .crudding/<template_endpoint.name>/ antes de remover o endpoint de exemplo da
+// estrutura do projeto, para que futuros add/remove endpoint continuem
+// funcionando.
+func BackupRegister(root string, m *manifest.Manifest) error {
+	recipe, err := buildEndpointRecipe(*m, m.TemplateEndpoint.Name, true)
+	if err != nil {
+		return err
+	}
+	files, err := recipe.outputs()
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if file.output == file.source || strings.HasPrefix(file.output, ".crudding/") {
+			return fmt.Errorf("%q é o endpoint de exemplo do campo template_endpoint do %s; os arquivos em %s não podem ser removidos", m.TemplateEndpoint.Name, manifest.FileName, file.source)
+		}
+	}
+	var created []string
+	for _, target := range recipe.spec.Register {
+		if err := checkPaths(target, target); err != nil {
+			return fmt.Errorf("endpoint.register: %w", err)
+		}
+		backupRel := path.Join(".crudding", recipe.spec.Name, target)
+		backupPath := filepath.Join(root, filepath.FromSlash(backupRel))
+		if _, err := os.Stat(backupPath); err == nil {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(target)))
+		if err != nil {
+			return fmt.Errorf("ler %s: %w", target, err)
+		}
+		cleaned := stripOtherEndpoints(*m, recipe, content)
+		if err := os.MkdirAll(filepath.Dir(backupPath), 0o755); err != nil {
+			return fmt.Errorf("criar diretório para %s: %w", backupRel, err)
+		}
+		if err := os.WriteFile(backupPath, cleaned, 0o644); err != nil {
+			return fmt.Errorf("gravar %s: %w", backupRel, err)
+		}
+		created = append(created, backupRel)
+	}
+	if len(created) > 0 {
+		return common.RecordCreated(m, created)
+	}
+	return nil
+}
+
+func stripOtherEndpoints(m manifest.Manifest, sampleRecipe endpointRecipe, content []byte) []byte {
+	lines := strings.Split(string(content), "\n")
+	var sampleLines []string
+	for _, line := range lines {
+		if sampleRecipe.sampleLine(line) {
+			sampleLines = append(sampleLines, line)
+		}
+	}
+	if len(sampleLines) == 0 {
+		return content
+	}
+	otherSet := map[string]bool{}
+	for _, other := range m.Endpoints {
+		if other == sampleRecipe.spec.Name {
+			continue
+		}
+		otherRecipe, err := buildEndpointRecipe(m, other, true)
+		if err != nil {
+			continue
+		}
+		for _, line := range sampleLines {
+			if trimmed := strings.TrimSpace(otherRecipe.rename.Replace(line)); trimmed != "" {
+				otherSet[trimmed] = true
+			}
+		}
+	}
+	if len(otherSet) == 0 {
+		return content
+	}
+	var kept []string
+	for _, line := range lines {
+		if otherSet[strings.TrimSpace(line)] {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return []byte(strings.Join(kept, "\n"))
 }
 
 // EndpointRemovalPlan monta o RemovalPlan de "crudding remove endpoint name":
 // os arquivos copiados do exemplo, as pastas criadas para eles (removidas se
 // ficarem vazias) e as linhas duplicadas nos arquivos de register.
 func EndpointRemovalPlan(root string, m manifest.Manifest, name string) (common.RemovalPlan, error) {
-	recipe, err := newEndpointRecipe(m, name)
+	recipe, err := buildEndpointRecipe(m, name, true)
 	if err != nil {
 		return common.RemovalPlan{}, err
 	}
@@ -95,9 +181,12 @@ func EndpointRemovalPlan(root string, m manifest.Manifest, name string) (common.
 
 	var plan common.RemovalPlan
 	for _, file := range files {
+		if file.output == file.source || strings.HasPrefix(file.output, ".crudding/") {
+			return common.RemovalPlan{}, fmt.Errorf("%q é o endpoint de exemplo do campo template_endpoint do %s; os arquivos em %s não podem ser removidos", name, manifest.FileName, file.source)
+		}
 		plan.Files = append(plan.Files, file.output)
-		// Só as pastas cujo caminho mudou com o nome (ex.: internal/invoice).
-		for source, output := path.Dir(file.target), path.Dir(file.output); output != source; source, output = path.Dir(source), path.Dir(output) {
+		// Só as pastas cujo caminho contém o nome do endpoint (ex.: internal/invoice ou internal/template).
+		for source, output := path.Dir(file.target), path.Dir(file.output); source != "." && recipe.rename.mentions(source); source, output = path.Dir(source), path.Dir(output) {
 			if !slices.Contains(plan.Directories, output) {
 				plan.Directories = append(plan.Directories, output)
 			}
@@ -115,6 +204,16 @@ func EndpointRemovalPlan(root string, m manifest.Manifest, name string) (common.
 		for _, line := range strings.Split(string(content), "\n") {
 			if recipe.sampleLine(line) {
 				lines = append(lines, recipe.rename.Replace(line))
+			}
+		}
+		if len(lines) == 0 {
+			backupPath := filepath.Join(root, filepath.FromSlash(path.Join(".crudding", recipe.spec.Name, target)))
+			if refContent, err := os.ReadFile(backupPath); err == nil {
+				for _, line := range strings.Split(string(refContent), "\n") {
+					if recipe.sampleLine(line) {
+						lines = append(lines, recipe.rename.Replace(line))
+					}
+				}
 			}
 		}
 		if len(lines) > 0 {
@@ -136,6 +235,10 @@ type endpointRecipe struct {
 type endpointFile struct{ source, target, output string }
 
 func newEndpointRecipe(m manifest.Manifest, name string) (endpointRecipe, error) {
+	return buildEndpointRecipe(m, name, false)
+}
+
+func buildEndpointRecipe(m manifest.Manifest, name string, allowSample bool) (endpointRecipe, error) {
 	if err := CheckEndpoint(m); err != nil {
 		return endpointRecipe{}, err
 	}
@@ -146,7 +249,7 @@ func newEndpointRecipe(m manifest.Manifest, name string) (endpointRecipe, error)
 		return endpointRecipe{}, fmt.Errorf("%q é uma palavra reservada em %s", name, m.Language)
 	}
 	spec := m.TemplateEndpoint
-	if name == spec.Name {
+	if !allowSample && name == spec.Name {
 		return endpointRecipe{}, fmt.Errorf("%q é o endpoint de exemplo do campo template_endpoint do %s; use outro nome", name, manifest.FileName)
 	}
 
@@ -185,7 +288,7 @@ func (r endpointRecipe) outputs() ([]endpointFile, error) {
 		switch {
 		case strings.HasPrefix(source, prefix):
 			target = strings.TrimPrefix(source, prefix)
-			if r.rename.Replace(target) == target {
+			if !r.rename.mentions(target) {
 				target = path.Join(path.Dir(target), r.spec.Name, path.Base(target))
 			}
 		case strings.HasPrefix(source, ".crudding/"):
@@ -197,7 +300,7 @@ func (r endpointRecipe) outputs() ([]endpointFile, error) {
 		if err := checkPaths(source, output); err != nil {
 			return nil, fmt.Errorf("endpoint.files: %w", err)
 		}
-		if output == target {
+		if !r.rename.mentions(target) {
 			return nil, fmt.Errorf("endpoint.files: %s não contém o nome do exemplo %q, então o arquivo novo teria o mesmo caminho", source, r.spec.Name)
 		}
 		files[index] = endpointFile{source: source, target: target, output: output}
@@ -209,6 +312,64 @@ func (r endpointRecipe) outputs() ([]endpointFile, error) {
 // menciona outro endpoint cujo nome contém o dele.
 func (r endpointRecipe) sampleLine(line string) bool {
 	return r.rename.mentions(line) && !slices.ContainsFunc(r.others, func(form string) bool { return strings.Contains(line, form) })
+}
+
+// registerLines registra o novo endpoint em target: usa as linhas do exemplo
+// se ainda estiverem em content; caso o exemplo tenha sido removido da
+// estrutura do projeto, usa outro endpoint ativo ou o backup em .crudding/.
+func (r endpointRecipe) registerLines(root string, m manifest.Manifest, target, name string, content []byte) ([]byte, error) {
+	if slices.ContainsFunc(strings.Split(string(content), "\n"), r.sampleLine) {
+		return r.duplicateLines(target, content)
+	}
+	for i := len(m.Endpoints) - 1; i >= 0; i-- {
+		anchor := m.Endpoints[i]
+		if anchor == r.spec.Name {
+			continue
+		}
+		anchorManifest := m
+		anchorManifest.TemplateEndpoint.Name = anchor
+		anchorRecipe, err := buildEndpointRecipe(anchorManifest, name, false)
+		if err == nil && slices.ContainsFunc(strings.Split(string(content), "\n"), anchorRecipe.sampleLine) {
+			return anchorRecipe.duplicateLines(target, content)
+		}
+	}
+	backupPath := filepath.Join(root, filepath.FromSlash(path.Join(".crudding", r.spec.Name, target)))
+	refContent, err := os.ReadFile(backupPath)
+	if err != nil {
+		return r.duplicateLines(target, content)
+	}
+	return r.insertFromReference(target, refContent, content)
+}
+
+func (r endpointRecipe) insertFromReference(target string, refContent, content []byte) ([]byte, error) {
+	refLines := strings.Split(string(refContent), "\n")
+	curLines := strings.Split(string(content), "\n")
+	var result []string
+	curIdx := 0
+	found := false
+	for refIdx := 0; refIdx < len(refLines); refIdx++ {
+		if r.sampleLine(refLines[refIdx]) {
+			found = true
+			result = append(result, r.rename.Replace(refLines[refIdx]))
+			continue
+		}
+		matchIdx := -1
+		for i := curIdx; i < len(curLines); i++ {
+			if curLines[i] == refLines[refIdx] {
+				matchIdx = i
+				break
+			}
+		}
+		if matchIdx >= 0 {
+			result = append(result, curLines[curIdx:matchIdx+1]...)
+			curIdx = matchIdx + 1
+		}
+	}
+	result = append(result, curLines[curIdx:]...)
+	if !found {
+		return nil, fmt.Errorf("endpoint.register: %s não tem nenhuma linha que mencione o endpoint de exemplo %q", target, r.spec.Name)
+	}
+	return []byte(strings.Join(result, "\n")), nil
 }
 
 // duplicateLines repete cada bloco de linhas consecutivas do exemplo logo

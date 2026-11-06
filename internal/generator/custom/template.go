@@ -181,7 +181,7 @@ type nameReplacer struct {
 func newNameReplacer(pairs [][2]string) nameReplacer {
 	var kept [][2]string
 	for _, pair := range pairs {
-		if pair[0] != "" && pair[0] != pair[1] && !slices.ContainsFunc(kept, func(k [2]string) bool { return k[0] == pair[0] }) {
+		if pair[0] != "" && !slices.ContainsFunc(kept, func(k [2]string) bool { return k[0] == pair[0] }) {
 			kept = append(kept, pair)
 		}
 	}
@@ -191,7 +191,9 @@ func newNameReplacer(pairs [][2]string) nameReplacer {
 	var args []string
 	for _, pair := range kept {
 		r.olds = append(r.olds, pair[0])
-		args = append(args, pair[0], pair[1])
+		if pair[0] != pair[1] {
+			args = append(args, pair[0], pair[1])
+		}
 	}
 	r.replacer = strings.NewReplacer(args...)
 	return r

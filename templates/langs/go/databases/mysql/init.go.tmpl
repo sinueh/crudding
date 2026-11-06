@@ -3,4 +3,7 @@
 	} else {
 		db = mysqlDB
 		defer db.Close()
+		if err := config.MigrateMySQL(db, "migrations"); err != nil {
+			log.Printf("Aviso: falha ao aplicar migrações no mysql: %v", err)
+		}
 	}

@@ -11,7 +11,11 @@ description: >-
 
 Guia completo de instruções para agentes de IA sobre **como utilizar a CLI `crudding`** em projetos e sobre a arquitetura interna do repositório **crudding**.
 
-> **Importante para Agentes de IA:** Sempre passe argumentos e flags explícitos (`crudding new ...`, `crudding add endpoint <name>`, `crudding add db <db>`) em vez de rodar comandos interativos (TUI) sem argumentos.
+> **Importante para Agentes de IA:**
+> 1. Sempre passe argumentos e flags explícitos (`crudding new ...`, `crudding add endpoint <name>`, `crudding add db <db>`) em vez de rodar comandos interativos (TUI) sem argumentos.
+> 2. **Anti-Viés de Scaffold:** O `crudding` gera apenas o esqueleto CRUD básico por tabela. Ao construir um sistema para o usuário:
+>    - **Modele todas as tabelas relacionais e associativas (1:N e N:N)** usando `<entidade>:ref` (ex.: não crie apenas `cart` e `order`; crie também `product`, `cart_item` e `order_item`).
+>    - **Não pare após rodar a CLI:** depois de gerar o scaffold em lote, leia e edite os arquivos de domínio (`service`, `handler`/`controller`) para implementar todas as regras de negócio, cálculos de totais, validações de estoque, JOINs, transações e autenticação pedidas no prompt.
 
 ---
 
@@ -50,16 +54,22 @@ crudding new n:TsApi l:node r:ts f:fastify a:modular
 Execute dentro do diretório do projeto (onde existe o arquivo `project.crud`):
 
 ```sh
-# Adicionar um novo endpoint CRUD (snake_case)
-crudding add endpoint <nome>
+# Adicionar um novo endpoint CRUD (cópia simples ou com campos tipados)
+crudding add endpoint <nome> [campo:tipo[?] ...]
 
-# Remover um endpoint CRUD existente
+# Remover um endpoint CRUD existente (inclusive o endpoint "template" da estrutura do projeto)
 crudding remove endpoint <nome>
+
+# Dica de performance (lote): encadeie múltiplos comandos em uma única execução shell
+crudding remove endpoint template && \
+  crudding add endpoint store name:str && \
+  crudding add endpoint product store:ref name:str price:decimal image_url:str?
 ```
 
-- **Como funciona:** Copia o endpoint de exemplo definido em `"template_endpoint"` no `project.crud` (`name`, `files`, `register`), substituindo identificadores em `snake_case`, `kebab-case`, `camelCase` e `PascalCase`, e duplica/remove as linhas de registro (rotas, imports, injeção de dependência) nos arquivos de `register`.
+- **Tipos suportados em campos tipados (Go e Python):** `str`, `text`, `int`, `float`, `decimal`, `bool`, `date`, `datetime`, `uuid`, `ref` (`store:ref` gera FK `store_id` para `store.id`); sufixo `?` torna o campo opcional (`NULL`).
+- **Como funciona:** Copia o molde definido em `"template_endpoint"` no `project.crud` (`name`, `files`, `register`, guardado em `.crudding/template/*`), substituindo identificadores em `snake_case`, `kebab-case`, `camelCase` e `PascalCase`, e duplica/remove as linhas de registro (rotas, imports, injeção de dependência) nos arquivos de `register`.
 - **Restrições:**
-  - O próprio endpoint de exemplo (ex.: `user` em Go, `resource` em Python) não pode ser removido nem readicionado.
+  - Você **pode** remover o endpoint `template` que fica na estrutura do projeto (`crudding remove endpoint template`) para limpar a rota `/template` residual; o que **não** pode ser removido são os arquivos de molde dentro de `.crudding/template/*` (nem readicionar o nome reservado `template` via `add endpoint`).
   - Palavras reservadas da linguagem são recusadas.
 
 ### 3. Adicionando Infraestrutura de Banco de Dados (`add db`)
@@ -70,8 +80,12 @@ Execute dentro de um projeto gerado (`go`, `python` ou `node`, com arquitetura d
 crudding add db <postgres|mysql|mongo>
 ```
 
-- Cria ou atualiza `docker-compose.yml`, `.env.example` e a pasta `migrations/`.
-- Injeta a configuração e conexão em `config/config.go` (Go), `config/config.py` (Python) ou `src/database.{js,ts}` (Node), e atualiza `go.mod`, `requirements.txt` ou `package.json`.
+- Cria ou atualiza `docker-compose.yml` (já mapeando `./migrations:/docker-entrypoint-initdb.d:ro`), `.env.example` e a pasta `migrations/` (`000001_init.up.sql`/`.down.sql` ou `.js` criando a tabela/coleção `template`).
+- Injeta a configuração, conexão e função nativa de execução de migrações:
+  - **Go**: `MigratePostgres` / `MigrateMySQL` em `config/config.go` (ou `internal/config/config.go`), executadas automaticamente ao iniciar a API em `main.go`.
+  - **Python**: `run_migrations()` em `src/app/config/config.py` (ou `src/config/config.py` em `flat`), executável diretamente via `python -m src.app.config.config` (e chamada automaticamente nos testes gerados).
+  - **Node**: `runMigrations()` exportado em `src/database.{js,ts}`.
+- Atualiza `go.mod`, `requirements.txt` ou `package.json`.
 
 ### 4. Inspecionando o Projeto (`info` / `info draw`)
 
@@ -129,7 +143,7 @@ crudding add skill
   - `node`: runtimes `js` e `ts`; frameworks `raw`, `express`, `nest`, `fastify`.
 - **Arquiteturas (Padrões de Pastas)**:
   - **Para Golang**:
-    1. `flat`: tudo na raiz no pacote `main` (`user_model.go`, `user_types.go`, `user_service.go`, `user_handler.go`, `routes.go`, `main.go`, `README.md`).
+    1. `flat`: tudo na raiz no pacote `main` (`template_model.go`, `template_types.go`, `template_service.go`, `template_handler.go`, `routes.go`, `main.go`, `README.md`).
     2. `layered`: separação clássica em camadas sob `internal/` (`models`, `types`, `service`, `handlers`, `routes`), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
     3. `modular`: *package-by-feature* com módulos (`internal/<feature>/` com `model.go`, `types.go`, `service.go`, `handler.go`), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
     4. `hexagonal`: *Ports & Adapters* com `internal/domain` (entidades e tipos), `internal/ports` (interfaces repository/service), `internal/application` (serviços de aplicação), `internal/adapters/postgres` (adaptador secundário), `internal/handlers` (adaptador primário HTTP), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
@@ -137,15 +151,9 @@ crudding add skill
    - **Para Python**:
       - `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`, com estruturas próprias sob `src/`.
    - **Para Node**:
-      - `monorepo`
-      - `camadas` (Layered / Onion básico)
-      - `clean arch` (Clean Architecture / Uncle Bob)
-      - `hexagonal` (Ports & Adapters)
-      - `4horse` (Routes, Controllers, Services, Repositories)
+      - runtimes `js` e `ts`; frameworks `raw`, `express`, `fastify`, `nest`; arquiteturas `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`.
 
 Cada arquitetura em Go possui seu próprio `README.md` detalhado explicando o funcionamento, princípios e comandos de execução.
-
-- **Para Node**: runtimes `js` e `ts`; frameworks `raw`, `express`, `fastify`, `nest`; arquiteturas `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`.
 
 ---
 
@@ -268,10 +276,10 @@ crudding/
 4. `common.Apply` valida a ausência de conflitos e grava os arquivos.
 5. Atualiza dependências (`go.mod`, `requirements.txt` ou `package.json`) com os drivers do banco e atualiza o manifesto `project.crud` com o banco adicionado.
 
-**Para uma linguagem ou arquitetura ter `add endpoint`**: o `Plan` do gerador deve gerar um endpoint de exemplo e preencher `common.Plan.TemplateEndpoint` (`name`, `files`, `register`), como fazem `langs/golang/generate.go` (`user`) e `langs/python/sample.go` (`resource`). O exemplo precisa de três coisas:
-- todo arquivo dele tem o nome do exemplo no caminho;
+**Para uma linguagem ou arquitetura ter `add endpoint`**: o `project.crud.tmpl` da arquitetura deve gerar um endpoint de exemplo (`template`, com os arquivos de molde guardados em `.crudding/template/*` e uma cópia na estrutura do projeto) e preencher `template_endpoint` (`name`, `files`, `register`). O exemplo precisa de três coisas:
+- todo arquivo dele tem o nome do exemplo no caminho (ou está sob `.crudding/template/`);
 - o registro (rotas, imports, injeção de dependência) fica em linhas únicas que mencionam o exemplo, nos arquivos de `register`;
-- nenhuma declaração de várias linhas do exemplo fica num arquivo compartilhado (por isso, no Go hexagonal/clean_arch, os DTOs e ports ficam em `user_types.go`, `user_repository.go` e `user_service.go`).
+- nenhuma declaração de várias linhas do exemplo fica num arquivo compartilhado (por isso, no Go hexagonal/clean_arch, os DTOs e ports ficam em `template_types.go`, `template_repository.go` e `template_service.go`).
 
 O `TestEndpointRoundTripAllCombinations` confere isso em todas as combinações. Node ainda não gera o campo. Os markers `crudding:db-*`, `crudding:compose-*` e `crudding:env` são do `add db` e não podem ser removidos dos templates.
 
@@ -289,12 +297,12 @@ Caminho paralelo ao registry: qualquer projeto vira template, e os templates sã
 
 ### Campo `template_endpoint` (endpoints personalizados)
 
-É o único mecanismo de `add/remove endpoint` (`generator.AddEndpoint`/`RemoveEndpoint` chamam `custom.EndpointPatch`/`custom.EndpointRemovalPlan`). Os projetos gerados já trazem o campo apontando para o endpoint de exemplo.
+É o único mecanismo de `add/remove endpoint` (`generator.AddEndpoint`/`RemoveEndpoint` chamam `custom.EndpointPatch`/`custom.EndpointRemovalPlan`). Os projetos gerados já trazem o campo apontando para o endpoint de exemplo (`template` em `.crudding/template/*`).
 
-- O `add` copia `files` do endpoint de exemplo (`name`) trocando o nome por snake/kebab/Pascal/camel (`common.Patch.Raw`). Num exemplo de uma palavra só, o nome seguido de maiúscula (`userRepo`) conta como camelCase. Palavras reservadas da linguagem são recusadas (`reservedNames`). Em cada arquivo de `register`, repete logo abaixo cada bloco de linhas consecutivas que menciona o exemplo (`common.Patch.Rewrites`).
-- O `remove` apaga as cópias, as pastas cujo caminho mudou com o nome e as linhas repetidas (`common.RemovalPlan`).
+- O `add` copia `files` do endpoint de exemplo (`name`) trocando o nome por snake/kebab/Pascal/camel (`common.Patch.Raw`). Num exemplo de uma palavra só, o nome seguido de maiúscula (`templateRepo`) conta como camelCase. Palavras reservadas da linguagem são recusadas (`reservedNames`). Em cada arquivo de `register`, repete logo abaixo cada bloco de linhas consecutivas que menciona o exemplo (`common.Patch.Rewrites`).
+- O `remove` apaga as cópias, as pastas cujo caminho contém o nome e as linhas correspondentes nos arquivos de `register` (`common.RemovalPlan`).
 - Linhas que mencionam outro endpoint cujo nome contém o do exemplo (`order_item` com exemplo `item`) não contam como do exemplo (`endpointRecipe.others`).
-- O próprio exemplo não pode ser adicionado nem removido.
+- O endpoint `template` que fica na estrutura do projeto pode ser removido via `crudding remove endpoint template` (antes de limpar as linhas de `register`, o `BackupRegister` salva o arquivo de referência em `.crudding/template/<register>` para que futuros `add/remove endpoint` continuem funcionando). O molde dentro de `.crudding/template/*` nunca é removido, e `add endpoint template` continua bloqueado.
 - `AddEndpoint`, `RemoveEndpoint` e `AddDatabase` mantêm `files`/`directories` em dia com `common.RecordCreated`/`RecordRemoved`, em qualquer projeto.
 
 Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`fs.ValidPath`, `filepath.IsLocal`, `project.crud` reservado), symlinks são rejeitados e o destino não pode ficar dentro da pasta do template. Não relaxe essas verificações.
