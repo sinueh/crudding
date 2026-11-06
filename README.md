@@ -4,14 +4,13 @@ Interactive CLI written in Go 1.27 that generates projects from templates embedd
 
 ![App Screenshot](docs/assets/panel.svg)
 
-## Install the `crudding` and `crd` Commands
+## Install the `crudding` Command
 
 ```sh
 go install github.com/sinueh/crudding/cmd/crudding@latest
-go install github.com/sinueh/crudding/cmd/crd@latest
 ```
 
-Or build and install locally from source (installs both `crudding` and `crd`):
+Or build and install locally from source:
 
 ```sh
 make install
@@ -19,12 +18,10 @@ make install
 
 ## Run
 
-After installation you can use either the command `crudding` or its abbreviation `crd` to create a new project:
+After the instalation you can use the command "crudding" to create a new project 
 
 ```sh
 crudding
-# or
-crd
 ```
 
 Use the arrow keys to navigate, Space to select, and Enter to continue. Choose Python, Go, or Node, then select a framework and architecture. Python architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean_arch`. Go architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean arch`. Node frameworks are `raw`, `express`, `fastify`, and `nest`; its architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean_arch`. Also choose JavaScript (`js`) or TypeScript (`ts`). Before generating the project, crudding prompts for a name and creates a directory with that name in the current working directory. Existing directories are never overwritten. Press `q` or Esc to exit.
@@ -47,6 +44,22 @@ Every generated project contains a `project.crud` file at its root recording how
   "files": [".gitignore", "README.md", "requirements.txt", "src/app/main.py"]
 }
 ```
+
+## Summary and `--json`
+
+`crudding new`, `template use`, `add endpoint`, `remove endpoint` and `add db` end with a short summary of what changed, with paths grouped by directory:
+
+```text
+Endpoint product criado.
+criado:   src/app/product/{__init__,controller,models,service}.py
+alterado: project.crud, src/app/main.py
+editar:   src/app/product/service.py (regras de negócio)
+          src/app/product/models.py (campos)
+rota:     /product
+próximo:  uvicorn src.app.main:app --reload
+```
+
+`editar` lists the files you are expected to fill in, `rota` the HTTP routes and `próximo` the next commands. Add `--json` (or `json:true`) to any of these commands to get a single JSON object on stdout instead, with `command`, `project`, `created`, `modified`, `removed`, `edit`, `routes` and `next` (paths relative to the project root). `crudding info --json` prints the project's name, stack, databases, endpoints, routes and `template_endpoint`. In JSON mode nothing else is written to stdout, errors go to stderr and commands that would prompt fail instead, so pass the names as arguments.
 
 ## Add an Endpoint
 
@@ -171,7 +184,6 @@ The name replacement is plain text, so choose a distinctive model name: with `us
 
 ```text
 cmd/crudding/                    application entry point
-cmd/crd/                         abbreviated application entry point
 cmd/genall/                      generate all supported combinations
 internal/generator/              generation dispatcher
 internal/generator/common/       shared helpers

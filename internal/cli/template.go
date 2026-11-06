@@ -91,7 +91,10 @@ func TemplateUseUsage() string {
 	b.WriteString("  salvo em ~/.crudding/templates. O nome do template é trocado pelo nome do novo projeto.\n")
 	b.WriteString("  - Sem o nome, solicita interativamente.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding template use <template> [<nome> | name:<nome> | n:<nome>]\n\n")
+	b.WriteString("  crudding template use <template> [<nome> | name:<nome> | n:<nome>] [--json]\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString(jsonFlagUsage)
+	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding template use meu-template\n")
 	b.WriteString("  crudding template use meu-template minha-api\n")
@@ -160,6 +163,10 @@ func runTemplateList(args []string, stdout, _ io.Writer) error {
 }
 
 func runTemplateUse(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	for _, token := range args {
 		if slices.Contains(helpFlags, token) {
 			fmt.Fprint(stdout, TemplateUseUsage())
@@ -188,6 +195,8 @@ func runTemplateUse(args []string, stdout, _ io.Writer) error {
 		if err := project.ValidateProjectName(projectName); err != nil {
 			return err
 		}
+	} else if asJSON {
+		return errJSONNeedsArg("o nome do projeto")
 	} else {
 		projectName, err = project.ReadProjectName(os.Stdin, stdout)
 		if err != nil {
@@ -204,9 +213,15 @@ func runTemplateUse(args []string, stdout, _ io.Writer) error {
 		return err
 	}
 
-	fmt.Fprintf(stdout, "\nProjeto gerado em: %s\n", projectDirectory)
-	fmt.Fprintf(stdout, "Template: %s (%d pastas, %d arquivos)\n", m.Name, len(m.Directories), len(m.Files))
-	return nil
+	report, err := newProjectSummary("template use", projectDirectory)
+	if err != nil {
+		return err
+	}
+	if !asJSON {
+		fmt.Fprintf(stdout, "\nProjeto gerado em: %s\n", projectDirectory)
+		fmt.Fprintf(stdout, "Template: %s (%d pastas, %d arquivos)\n", m.Name, len(m.Directories), len(m.Files))
+	}
+	return report.write(stdout, asJSON)
 }
 
 func runTemplateExport(args []string, stdout, _ io.Writer) error {

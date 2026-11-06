@@ -357,7 +357,7 @@ func TestCLIAddTypedEndpoint(t *testing.T) {
 	if code := cli.Run(args, &stdout, &stderr); code != 0 {
 		t.Fatalf("Run(%v) = %d, stderr = %q", args, code, stderr.String())
 	}
-	for _, want := range []string{"Endpoint product criado.", "migrations/000002_create_product.up.sql", "internal/routes/product_test.go"} {
+	for _, want := range []string{"Endpoint product criado.", "000002_create_product", "internal/routes/product_test.go"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Errorf("stdout sem %q:\n%s", want, stdout.String())
 		}

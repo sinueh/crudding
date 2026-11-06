@@ -12,7 +12,6 @@ import (
 	"github.com/sinueh/crudding"
 	"github.com/sinueh/crudding/internal/generator"
 	"github.com/sinueh/crudding/internal/generator/fields"
-	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/manifest"
 	"github.com/sinueh/crudding/internal/project"
 )
@@ -31,7 +30,10 @@ func AddEndpointUsage() string {
 	b.WriteString("    ao banco (postgres/mysql; sem banco, em memória), controller, migração e teste.\n")
 	b.WriteString("    Tipos: " + strings.Join(fields.Types, ", ") + " (ref = chave estrangeira para <nome>, coluna <nome>_id).\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>] [campo:tipo[?] ...]\n\n")
+	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>] [campo:tipo[?] ...] [--json]\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString(jsonFlagUsage)
+	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding add endpoint\n")
 	b.WriteString("  crudding add endpoint customer\n")
@@ -39,16 +41,6 @@ func AddEndpointUsage() string {
 	b.WriteString("  crudding add endpoint product name:str price:decimal image_url:str?\n")
 	b.WriteString("  crudding add endpoint cart_item cart:ref product:ref quantity:int\n")
 	return b.String()
-}
-
-func printEndpointSummary(stdout io.Writer, name string, result common.Result) {
-	fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
-	for _, file := range result.Created {
-		fmt.Fprintf(stdout, "  criado     %s\n", file)
-	}
-	for _, file := range result.Modified {
-		fmt.Fprintf(stdout, "  alterado   %s\n", file)
-	}
 }
 
 func parseEndpointArgs(args []string) (string, bool, bool, error) {
@@ -125,6 +117,10 @@ func parseEndpointName(args []string) (string, bool, bool, error) {
 }
 
 func runAddEndpoint(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	argName, specs, hasArg, showHelp, err := parseTypedEndpointArgs(args)
 	if err != nil {
 		return err
@@ -142,12 +138,17 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	if !asJSON {
+		fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	}
 	if err := generator.CheckEndpointSupport(m); err != nil {
 		return err
 	}
 
 	name := argName
+	if !hasArg && asJSON {
+		return errJSONNeedsArg("o nome do endpoint")
+	}
 	if !hasArg {
 		name, err = project.ReadEndpointName(os.Stdin, stdout)
 		if err != nil {
@@ -159,9 +160,18 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	printEndpointSummary(stdout, name, result)
-	for _, note := range notes {
-		fmt.Fprintf(stdout, "  aviso      %s\n", note)
+	routes := endpointRoutes(root, m.TemplateEndpoint.Register, name)
+	report := endpointSummary("add endpoint", root, m, result.Created, nil, result.Modified, routes)
+	if !asJSON {
+		fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
+	}
+	if err := report.write(stdout, asJSON); err != nil {
+		return err
+	}
+	if !asJSON {
+		for _, note := range notes {
+			fmt.Fprintf(stdout, "  aviso      %s\n", note)
+		}
 	}
 	return nil
 }

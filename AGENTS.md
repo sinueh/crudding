@@ -42,8 +42,6 @@ crudding/
 ├── cmd/
 │   └── crudding/
 │       └── main.go              # Ponto de entrada mínimo (delega para internal/cli)
-│   └── crd/
-│       └── main.go              # Ponto de entrada abreviado crd (delega para internal/cli)
 │   └── genall/
 │       └── main.go              # Gera todas as combinações suportadas para validação
 ├── internal/
@@ -55,7 +53,8 @@ crudding/
 │   │   ├── init.go              # Comando "crudding init" (runInit)
 │   │   ├── add_template.go      # Comando "crudding add template" (runAddTemplate)
 │   │   ├── template.go          # Comandos "crudding template list|use|export|import" (runTemplate)
-│   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
+│   │   ├── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
+│   │   └── summary.go           # Resumo pós-comando (criado/alterado/editar/rota/próximo) e saída --json
 │   ├── generator/
 │   │   ├── common/
 │   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
@@ -197,8 +196,6 @@ Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`f
 ```sh
 # Executar a CLI em desenvolvimento
 go run ./cmd/crudding
-# ou versão abreviada
-go run ./cmd/crd
 
 # Salvar projeto como template e listar
 go run /caminho/do/crudding/cmd/crudding add template ./meu-projeto meu-template
@@ -208,11 +205,15 @@ go run /caminho/do/crudding/cmd/crudding template use meu-template meu-app
 # Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
 go run /caminho/do/crudding/cmd/crudding add endpoint
 
-# Executar testes unitários
+# Executar verificações e testes unitários
+go vet ./...
 go test ./...
 
-# Instalar os binários localmente (crudding e crd)
-go install ./cmd/crudding ./cmd/crd
+# Gerar todas as combinações de linguagem/framework/arquitetura em ./generated
+make genall
+
+# Instalar o binário localmente
+go install ./cmd/crudding
 # ou via Makefile
 make install
 ```

@@ -11,7 +11,6 @@ import (
 
 	"github.com/sinueh/crudding"
 	"github.com/sinueh/crudding/internal/generator"
-	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/manifest"
 	"github.com/sinueh/crudding/internal/project"
 )
@@ -23,21 +22,14 @@ func RemoveEndpointUsage() string {
 	b.WriteString("  Desfaz o \"crudding add endpoint\": remove as cópias do endpoint de exemplo e as\n")
 	b.WriteString("  linhas duplicadas nos arquivos de \"register\", além de atualizar o project.crud.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding remove endpoint [<nome> | name:<nome> | n:<nome>]\n\n")
+	b.WriteString("  crudding remove endpoint [<nome> | name:<nome> | n:<nome>] [--json]\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString(jsonFlagUsage)
+	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding remove endpoint customer\n")
 	b.WriteString("  crudding remove endpoint n:invoice\n")
 	return b.String()
-}
-
-func printRemoveEndpointSummary(stdout io.Writer, name string, result common.RemoveResult) {
-	fmt.Fprintf(stdout, "\nEndpoint %s removido.\n", name)
-	for _, file := range result.Removed {
-		fmt.Fprintf(stdout, "  removido   %s\n", file)
-	}
-	for _, file := range result.Modified {
-		fmt.Fprintf(stdout, "  alterado   %s\n", file)
-	}
 }
 
 func parseRemoveEndpointArgs(args []string) (string, bool, bool, error) {
@@ -82,6 +74,10 @@ func parseRemoveEndpointArgs(args []string) (string, bool, bool, error) {
 }
 
 func runRemoveEndpoint(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	argName, hasArg, showHelp, err := parseRemoveEndpointArgs(args)
 	if err != nil {
 		return err
@@ -99,12 +95,17 @@ func runRemoveEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	if !asJSON {
+		fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	}
 	if err := generator.CheckEndpointSupport(m); err != nil {
 		return err
 	}
 
 	name := argName
+	if !hasArg && asJSON {
+		return errJSONNeedsArg("o nome do endpoint")
+	}
 	if !hasArg {
 		name, err = project.ReadEndpointName(os.Stdin, stdout)
 		if err != nil {
@@ -112,15 +113,25 @@ func runRemoveEndpoint(args []string, stdout, _ io.Writer) error {
 		}
 	}
 
+	// As rotas são lidas antes, enquanto as linhas de registro ainda existem.
+	var routes []string
+	if m.HasEndpoint(name) {
+		routes = endpointRoutes(root, m.TemplateEndpoint.Register, name)
+	}
 	typed := len(m.EndpointFields[name]) > 0
 	result, err := generator.RemoveTypedEndpoint(root, m, name, crudding.Templates)
 	if err != nil {
 		return err
 	}
-	printRemoveEndpointSummary(stdout, name, result)
-	if typed {
+	report := endpointSummary("remove endpoint", root, m, nil, result.Removed, result.Modified, routes)
+	if !asJSON {
+		fmt.Fprintf(stdout, "\nEndpoint %s removido.\n", name)
+	}
+	if err := report.write(stdout, asJSON); err != nil {
+		return err
+	}
+	if !asJSON && typed {
 		fmt.Fprintf(stdout, "  aviso      as migrações de %s em migrations/ foram mantidas (não dá para saber se já foram aplicadas); apague-as ou crie uma migração de DROP TABLE\n", name)
 	}
 	return nil
 }
-
