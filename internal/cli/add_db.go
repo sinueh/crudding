@@ -25,9 +25,12 @@ func AddDBUsage() string {
 	b.WriteString("  - Sem argumentos (\"crudding add db\"), abre menu para escolher o banco.\n")
 	b.WriteString("  - Com argumento, adiciona o banco diretamente.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding add db [<banco> | db:<banco> | d:<banco>]\n\n")
+	b.WriteString("  crudding add db [<banco> | db:<banco> | d:<banco>] [--json]\n\n")
 	b.WriteString("bancos suportados:\n")
 	b.WriteString("  postgres, mysql, mongo\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString(jsonFlagUsage)
+	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding add db\n")
 	b.WriteString("  crudding add db postgres\n")
@@ -35,20 +38,14 @@ func AddDBUsage() string {
 	return b.String()
 }
 
-func printDBSummary(stdout io.Writer, db string, lang string, result common.Result) {
-	fmt.Fprintf(stdout, "\nBanco de dados %s adicionado com sucesso.\n", db)
-	for _, file := range result.Created {
-		fmt.Fprintf(stdout, "  criado     %s\n", file)
-	}
-	for _, file := range result.Modified {
-		fmt.Fprintf(stdout, "  alterado   %s\n", file)
-	}
-	if lang == "go" {
-		fmt.Fprintln(stdout, "\nPara atualizar as dependências Go, execute: go mod tidy")
-	} else if lang == "python" {
-		fmt.Fprintln(stdout, "\nPara instalar as dependências Python, execute: pip install -r requirements.txt")
-	} else if lang == "node" {
-		fmt.Fprintln(stdout, "\nPara instalar as dependências Node, execute: npm install")
+// dbSummary monta o resumo do "add db": subir o banco e instalar os drivers.
+func dbSummary(root string, m manifest.Manifest, result common.Result) summary {
+	return summary{
+		Command:  "add db",
+		Project:  root,
+		Created:  result.Created,
+		Modified: appendManifest(result.Modified),
+		Next:     appendNonEmpty([]string{"docker compose up -d"}, installCommand(m)),
 	}
 }
 
@@ -98,6 +95,10 @@ func parseDBArgs(args []string) (string, bool, bool, error) {
 }
 
 func runAddDB(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	argDB, hasArg, showHelp, err := parseDBArgs(args)
 	if err != nil {
 		return err
@@ -115,9 +116,14 @@ func runAddDB(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	if !asJSON {
+		fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	}
 
 	db := argDB
+	if !hasArg && asJSON {
+		return errJSONNeedsArg("o banco de dados")
+	}
 	if !hasArg {
 		selected, err := choose("escolha o banco de dados", generator.SupportedDatabases)
 		if err != nil {
@@ -130,7 +136,8 @@ func runAddDB(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	printDBSummary(stdout, db, m.Language, result)
-	return nil
+	if !asJSON {
+		fmt.Fprintf(stdout, "\nBanco de dados %s adicionado com sucesso.\n", db)
+	}
+	return dbSummary(root, m, result).write(stdout, asJSON)
 }
-

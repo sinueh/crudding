@@ -12,6 +12,21 @@ description: >-
 `crudding` is a Go CLI tool that scaffolds projects across multiple languages, frameworks, and architectural patterns from embedded templates (`embed.FS`) or user-saved templates (`~/.crudding/templates/`), tracking project structure in a root `project.crud` manifest.
 
 > **Important for AI Agents:** Always pass explicit arguments/flags (`crudding new ...`, `crudding add endpoint <name>`, `crudding add db <db>`) instead of running interactive TUI commands without arguments.
+>
+> **Não leia os arquivos gerados; use o resumo / `crudding info --json`.** Every command that writes files (`new`, `template use`, `add endpoint`, `remove endpoint`, `add db`) ends with a compact summary of what it created, changed and removed, the files to edit (`editar`), the routes (`rota`) and the next commands (`próximo`). Add `--json` (or `json:true`) to get the same data as one JSON object on stdout. Open only the files listed under `edit` when you need to change them.
+
+### Output (`--json`)
+
+```sh
+crudding add endpoint product --json
+```
+```json
+{"command":"add endpoint","project":"/abs/path/shop","created":["src/app/product/controller.py","src/app/product/service.py","src/app/product/models.py","src/app/product/__init__.py"],"modified":["src/app/main.py","project.crud"],"removed":[],"edit":["src/app/product/service.py","src/app/product/models.py"],"routes":["/product"],"next":["uvicorn src.app.main:app --reload"]}
+```
+
+- Paths are relative to `project` (the project root). `edit` = business logic (services, use cases) first, then models/entities.
+- `crudding info --json` → `{name, project, language, runtime?, framework, architecture, databases, orm?, endpoints, routes, template_endpoint}`.
+- In JSON mode stdout holds only the JSON object; errors go to stderr with exit code 1, and missing arguments are errors (no prompts).
 
 ---
 
@@ -20,7 +35,7 @@ description: >-
 Generate a project non-interactively using `key:value` tokens (or `-flag value`):
 
 ```sh
-crudding new n:<name> l:<lang> [r:<runtime>] f:<framework> a:<arch> [d:<db>] [o:<orm>]
+crudding new n:<name> l:<lang> [r:<runtime>] f:<framework> a:<arch> [d:<db>] [o:<orm>] [--json]
 ```
 
 ### Supported Stacks (`crudding stacks`)
@@ -82,6 +97,7 @@ crudding add db <postgres|mysql|mongo>
 ```sh
 # Show project name, stack, and registered endpoints from project.crud
 crudding info
+crudding info --json   # machine-readable: stack, endpoints, routes, template_endpoint
 
 # Render an ASCII diagram of the project's architecture (or any supported architecture)
 crudding info draw
@@ -121,6 +137,8 @@ crudding template import ./meu-template.zip
 When modifying the `crudding` source code:
 
 1. **Key Packages:**
+   - `cmd/crudding/main.go` & `cmd/crd/main.go`: CLI entrypoints (`crudding` and abbreviated `crd`).
+   - `internal/cli/`: Command routing (`cli.go`) and subcommand handlers (`new.go`, `add_endpoint.go`, `remove_endpoint.go`, `add_db.go`, `init.go`, `add_template.go`, `template.go`, `info.go`, `list.go`). `summary.go` builds the post-command summary and `--json` output from the generator results (`common.Result`/`RemoveResult`).
    - `cmd/crudding/main.go`: CLI entrypoint.
    - `internal/cli/`: Command routing (`cli.go`) and subcommand handlers (`new.go`, `add_endpoint.go`, `remove_endpoint.go`, `add_db.go`, `init.go`, `add_template.go`, `template.go`, `info.go`, `list.go`).
    - `internal/generator/`: Manifest-driven scaffold & patch engine (`common/`, `custom/`, `langs/golang/`, `langs/python/`, `langs/node/`).
