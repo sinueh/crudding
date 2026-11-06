@@ -23,8 +23,11 @@ func InfoUsage() string {
 	b.WriteString("  Lê o project.crud do projeto atual e exibe a stack configurada (linguagem,\n")
 	b.WriteString("  framework e arquitetura) e os endpoints registrados.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding info\n")
-	b.WriteString("  crudding info draw\n")
+	b.WriteString("  crudding info [--json]\n")
+	b.WriteString("  crudding info draw\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString("  --json (ou json:true)   imprime um objeto JSON com nome, stack, bancos, endpoints,\n")
+	b.WriteString("                          rotas e template_endpoint\n")
 	return b.String()
 }
 
@@ -68,7 +71,50 @@ func printInfoReport(stdout io.Writer, root string, m manifest.Manifest) {
 	}
 }
 
+// projectInfo é a saída de "crudding info --json".
+type projectInfo struct {
+	Name             string                `json:"name"`
+	Project          string                `json:"project"`
+	Language         string                `json:"language"`
+	Runtime          string                `json:"runtime,omitempty"`
+	Framework        string                `json:"framework"`
+	Architecture     string                `json:"architecture"`
+	Databases        []string              `json:"databases"`
+	ORM              string                `json:"orm,omitempty"`
+	Endpoints        []string              `json:"endpoints"`
+	Routes           []string              `json:"routes"`
+	TemplateEndpoint manifest.EndpointSpec `json:"template_endpoint"`
+}
+
+func newProjectInfo(root string, m manifest.Manifest) projectInfo {
+	databases := slices.Clone(m.Databases)
+	if m.Database != "" && !slices.Contains(databases, m.Database) {
+		databases = append([]string{m.Database}, databases...)
+	}
+	routes := []string{}
+	if m.TemplateEndpoint.Defined() {
+		routes = append(routes, projectRoutes(root, m)...)
+	}
+	return projectInfo{
+		Name:             m.Name,
+		Project:          root,
+		Language:         m.Language,
+		Runtime:          m.Runtime,
+		Framework:        m.Framework,
+		Architecture:     m.Architecture,
+		Databases:        append([]string{}, databases...),
+		ORM:              m.ORM,
+		Endpoints:        append([]string{}, m.Endpoints...),
+		Routes:           routes,
+		TemplateEndpoint: m.TemplateEndpoint,
+	}
+}
+
 func runInfo(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	fs := flag.NewFlagSet("crudding info", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	if err := fs.Parse(args); err != nil {
@@ -95,6 +141,9 @@ func runInfo(args []string, stdout, _ io.Writer) error {
 	root, m, err := manifest.Find(workingDirectory)
 	if err != nil {
 		return err
+	}
+	if asJSON {
+		return writeJSON(stdout, newProjectInfo(root, m))
 	}
 	printInfoReport(stdout, root, m)
 	return nil
@@ -272,7 +321,7 @@ func drawFlatASCII(m manifest.Manifest) string {
 		entry, routes, handlers, services, models = "src/main.py", "main.py", "*_controller.py", "*_service.py", "*_model.py"
 	case "node":
 		ext := nodeExt(m.Runtime)
-		entry, routes, handlers, services, models = "src/main" + ext, "src/server" + ext, "src/tasks" + ext, "src/tasks" + ext, "src/tasks" + ext
+		entry, routes, handlers, services, models = "src/main"+ext, "src/server"+ext, "src/tasks"+ext, "src/tasks"+ext, "src/tasks"+ext
 	}
 
 	var b strings.Builder
@@ -389,11 +438,11 @@ func drawModularASCII(m manifest.Manifest) string {
 	b.WriteString("               ▼                         ▼\n")
 	b.WriteString(asciiBox("  ", width, false,
 		fmt.Sprintf("Módulo: %s (%s%s/)", firstMod, modPrefix, firstMod),
-		"  " + sliceItems,
+		"  "+sliceItems,
 	))
 	b.WriteString(asciiBox("  ", width, false,
 		fmt.Sprintf("Módulo: %s (%s%s/)", secondMod, modPrefix, secondMod),
-		"  " + sliceItems,
+		"  "+sliceItems,
 	))
 	return b.String()
 }
@@ -501,4 +550,3 @@ func nodeExt(runtime string) string {
 	}
 	return ".ts"
 }
-

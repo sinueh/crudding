@@ -12,6 +12,7 @@ import (
 
 	"github.com/sinueh/crudding"
 	"github.com/sinueh/crudding/internal/generator"
+	"github.com/sinueh/crudding/internal/manifest"
 	"github.com/sinueh/crudding/internal/project"
 	"github.com/sinueh/crudding/internal/tui"
 )
@@ -180,8 +181,8 @@ func NewUsage() string {
 	b.WriteString("  - Passando apenas o nome ou a primeira letra da flag (ex.: \"crudding new l\" ou\n")
 	b.WriteString("    \"crudding new f\"), lista as opções disponíveis para aquela flag (exceto name/n).\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding new name:<nome> lang:<linguagem> framework:<framework> arch:<arquitetura> [runtime:<runtime>] [db:<banco>] [orm:<orm>]\n")
-	b.WriteString("  crudding new n:<nome> l:<linguagem> f:<framework> a:<arquitetura> [r:<runtime>] [d:<banco>] [o:<orm>]\n\n")
+	b.WriteString("  crudding new name:<nome> lang:<linguagem> framework:<framework> arch:<arquitetura> [runtime:<runtime>] [db:<banco>] [orm:<orm>] [--json]\n")
+	b.WriteString("  crudding new n:<nome> l:<linguagem> f:<framework> a:<arquitetura> [r:<runtime>] [d:<banco>] [o:<orm>] [--json]\n\n")
 	b.WriteString("como cada flag funciona:\n")
 	b.WriteString("  name:<nome> ou n:<nome>               define o nome do projeto (pasta que será criada)\n")
 	b.WriteString("  lang:<linguagem> ou l:<linguagem>     define a linguagem do projeto\n")
@@ -189,7 +190,8 @@ func NewUsage() string {
 	b.WriteString("  arch:<arquitetura> ou a:<arquitetura> define o padrão arquitetural de pastas\n")
 	b.WriteString("  runtime:<runtime> ou r:<runtime>      define o runtime (obrigatório para node)\n")
 	b.WriteString("  db:<banco> ou d:<banco>               define o banco de dados (opcional: postgres, mysql, mongo, none)\n")
-	b.WriteString("  orm:<orm> ou o:<orm>                  define o ORM utilizado (opcional: none, gorm, sqlalchemy, etc.)\n\n")
+	b.WriteString("  orm:<orm> ou o:<orm>                  define o ORM utilizado (opcional: none, gorm, sqlalchemy, etc.)\n")
+	b.WriteString("  --json ou json:true                   imprime o resumo em JSON (created, modified, routes, next...)\n\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding new name:meu-app lang:go framework:gin arch:hexagonal\n")
 	b.WriteString("  crudding new n:meu-app l:go f:gin a:hexagonal\n")
@@ -336,19 +338,7 @@ func formatLanguageLine(config project.Config) string {
 	return fmt.Sprintf("Linguagem/motor: %s/%s", config.Language, config.Runtime)
 }
 
-func printNewSummary(stdout io.Writer, projectDirectory string, config project.Config) {
-	fmt.Fprintf(stdout, "\nProjeto gerado em: %s\n", projectDirectory)
-	fmt.Fprintln(stdout, formatLanguageLine(config))
-	fmt.Fprintf(stdout, "Framework: %s\nArquitetura: %s\n", config.Framework, config.Architecture)
-	if config.Database != "" {
-		fmt.Fprintf(stdout, "Banco de dados: %s\n", config.Database)
-	}
-	if config.ORM != "" {
-		fmt.Fprintf(stdout, "ORM: %s\n", config.ORM)
-	}
-}
-
-func generateProject(config project.Config, stdout io.Writer) error {
+func generateProject(config project.Config, stdout io.Writer, asJSON bool) error {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return err
@@ -357,8 +347,15 @@ func generateProject(config project.Config, stdout io.Writer) error {
 	if err := generator.Generate(projectDirectory, config, crudding.Templates); err != nil {
 		return err
 	}
-	printNewSummary(stdout, projectDirectory, config)
-	return nil
+	report, err := newProjectSummary("new", projectDirectory)
+	if err != nil {
+		return err
+	}
+	if !asJSON {
+		stack := manifest.New(config).Stack()
+		fmt.Fprintf(stdout, "\nProjeto gerado em: %s (%s)\n", projectDirectory, stack)
+	}
+	return report.write(stdout, asJSON)
 }
 
 func runInteractive(_ []string, stdout, _ io.Writer) error {
@@ -366,10 +363,14 @@ func runInteractive(_ []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return generateProject(config, stdout)
+	return generateProject(config, stdout, false)
 }
 
 func runNew(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("nenhum argumento informado; execute \"crudding new -h\" para ver o uso")
 	}
@@ -381,6 +382,5 @@ func runNew(args []string, stdout, _ io.Writer) error {
 		fmt.Fprint(stdout, info)
 		return nil
 	}
-	return generateProject(config, stdout)
+	return generateProject(config, stdout, asJSON)
 }
-

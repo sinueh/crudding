@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/sinueh/crudding/internal/generator"
-	"github.com/sinueh/crudding/internal/generator/common"
 	"github.com/sinueh/crudding/internal/manifest"
 	"github.com/sinueh/crudding/internal/project"
 )
@@ -26,22 +25,15 @@ func AddEndpointUsage() string {
 	b.WriteString("  - Sem argumentos (\"crudding add endpoint\"), solicita o nome interativamente.\n")
 	b.WriteString("  - Com argumento, cria o endpoint diretamente.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>]\n\n")
+	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>] [--json]\n\n")
+	b.WriteString("flags:\n")
+	b.WriteString(jsonFlagUsage)
+	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding add endpoint\n")
 	b.WriteString("  crudding add endpoint customer\n")
 	b.WriteString("  crudding add endpoint n:invoice\n")
 	return b.String()
-}
-
-func printEndpointSummary(stdout io.Writer, name string, result common.Result) {
-	fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
-	for _, file := range result.Created {
-		fmt.Fprintf(stdout, "  criado     %s\n", file)
-	}
-	for _, file := range result.Modified {
-		fmt.Fprintf(stdout, "  alterado   %s\n", file)
-	}
 }
 
 func parseEndpointArgs(args []string) (string, bool, bool, error) {
@@ -89,6 +81,10 @@ func parseEndpointArgs(args []string) (string, bool, bool, error) {
 }
 
 func runAddEndpoint(args []string, stdout, _ io.Writer) error {
+	args, asJSON, err := splitJSONFlag(args)
+	if err != nil {
+		return err
+	}
 	argName, hasArg, showHelp, err := parseEndpointArgs(args)
 	if err != nil {
 		return err
@@ -106,12 +102,17 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	if !asJSON {
+		fmt.Fprintf(stdout, "Projeto %s: %s\n", root, m.Stack())
+	}
 	if err := generator.CheckEndpointSupport(m); err != nil {
 		return err
 	}
 
 	name := argName
+	if !hasArg && asJSON {
+		return errJSONNeedsArg("o nome do endpoint")
+	}
 	if !hasArg {
 		name, err = project.ReadEndpointName(os.Stdin, stdout)
 		if err != nil {
@@ -123,6 +124,10 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	printEndpointSummary(stdout, name, result)
-	return nil
+	routes := endpointRoutes(root, m.TemplateEndpoint.Register, name)
+	report := endpointSummary("add endpoint", root, m, result.Created, nil, result.Modified, routes)
+	if !asJSON {
+		fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
+	}
+	return report.write(stdout, asJSON)
 }
