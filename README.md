@@ -48,6 +48,22 @@ Every generated project contains a `project.crud` file at its root recording how
 }
 ```
 
+## Summary and `--json`
+
+`crudding new`, `template use`, `add endpoint`, `remove endpoint` and `add db` end with a short summary of what changed, with paths grouped by directory:
+
+```text
+Endpoint product criado.
+criado:   src/app/product/{__init__,controller,models,service}.py
+alterado: project.crud, src/app/main.py
+editar:   src/app/product/service.py (regras de negócio)
+          src/app/product/models.py (campos)
+rota:     /product
+próximo:  uvicorn src.app.main:app --reload
+```
+
+`editar` lists the files you are expected to fill in, `rota` the HTTP routes and `próximo` the next commands. Add `--json` (or `json:true`) to any of these commands to get a single JSON object on stdout instead, with `command`, `project`, `created`, `modified`, `removed`, `edit`, `routes` and `next` (paths relative to the project root). `crudding info --json` prints the project's name, stack, databases, endpoints, routes and `template_endpoint`. In JSON mode nothing else is written to stdout, errors go to stderr and commands that would prompt fail instead, so pass the names as arguments.
+
 ## Add an Endpoint
 
 ```sh

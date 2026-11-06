@@ -55,7 +55,8 @@ crudding/
 │   │   ├── init.go              # Comando "crudding init" (runInit)
 │   │   ├── add_template.go      # Comando "crudding add template" (runAddTemplate)
 │   │   ├── template.go          # Comandos "crudding template list|use|export|import" (runTemplate)
-│   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
+│   │   ├── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
+│   │   └── summary.go           # Resumo pós-comando (criado/alterado/editar/rota/próximo) e saída --json
 │   ├── generator/
 │   │   ├── common/
 │   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
