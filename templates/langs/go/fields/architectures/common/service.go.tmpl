@@ -25,7 +25,7 @@ func (s *{{.VarName}}Service) Create(req domain.Create{{.Class}}Request) (domain
 	if err := s.repo.Create(&item); err != nil {
 		return domain.{{.Class}}Response{}, err
 	}
-	return s.response(item), nil
+	return s.GetByID(item.ID)
 }
 
 func (s *{{.VarName}}Service) List() ([]domain.{{.Class}}Response, error) {
@@ -57,7 +57,7 @@ func (s *{{.VarName}}Service) Update(id uint, req domain.Update{{.Class}}Request
 	if err := s.repo.Update(item); err != nil {
 		return domain.{{.Class}}Response{}, err
 	}
-	return s.response(*item), nil
+	return s.GetByID(id)
 }
 
 func (s *{{.VarName}}Service) Delete(id uint) error {
@@ -111,7 +111,8 @@ func (s *{{.VarName}}Service) Create(req {{$tq}}Create{{.Class}}Request) ({{$tq}
 	if err := s.insert(&item); err != nil {
 		return {{$tq}}{{.Class}}Response{}, err
 	}
-	return s.response(item), nil
+	// Relê o registro para devolver os valores como o banco gravou (ex.: decimais).
+	return s.GetByID(item.ID)
 }
 
 func (s *{{.VarName}}Service) List() ([]{{$tq}}{{.Class}}Response, error) {
@@ -143,7 +144,7 @@ func (s *{{.VarName}}Service) Update(id uint, req {{$tq}}Update{{.Class}}Request
 	if err := s.save(item); err != nil {
 		return {{$tq}}{{.Class}}Response{}, err
 	}
-	return s.response(*item), nil
+	return s.GetByID(id)
 }
 
 func (s *{{.VarName}}Service) Delete(id uint) error {

@@ -15,7 +15,8 @@ class {{.Class}}RepositoryAdapter({{.Class}}Repository):
             item.id = _insert(data)
         else:
             _update(item.id, data)
-        return item
+        # Relê o registro para devolver os valores como o banco gravou (ex.: decimais).
+        return self.find_by_id(item.id) or item
 
     def find_by_id(self, item_id: int) -> {{.Class}} | None:
         row = _select_one(item_id)
