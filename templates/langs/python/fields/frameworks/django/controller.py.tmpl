@@ -1,0 +1,57 @@
+import json
+
+from django.http import HttpResponse, JsonResponse
+from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
+from pydantic import ValidationError
+import {{.Modules.service}} as service
+from {{.Modules.model}} import {{.Class}}ConflictError
+
+
+def _payload(request) -> dict:
+    try:
+        return json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _not_found(item_id: int) -> JsonResponse:
+    return JsonResponse({"detail": f"{{.Class}} {item_id} not found"}, status=404)
+
+
+@csrf_exempt
+def list_or_create(request):
+    try:
+        if request.method == "GET":
+            return JsonResponse(service.list_all(), safe=False)
+        if request.method == "POST":
+            return JsonResponse(service.create(_payload(request)), status=201)
+        return HttpResponse(status=405)
+    except ValidationError as exc:
+        return JsonResponse({"detail": json.loads(exc.json(include_url=False))}, status=422)
+    except {{.Class}}ConflictError as exc:
+        return JsonResponse({"detail": str(exc)}, status=409)
+
+
+@csrf_exempt
+def detail(request, item_id: int):
+    try:
+        if request.method == "GET":
+            item = service.get(item_id)
+            return JsonResponse(item) if item is not None else _not_found(item_id)
+        if request.method == "PATCH":
+            item = service.update(item_id, _payload(request))
+            return JsonResponse(item) if item is not None else _not_found(item_id)
+        if request.method == "DELETE":
+            return HttpResponse(status=204) if service.delete(item_id) else _not_found(item_id)
+        return HttpResponse(status=405)
+    except ValidationError as exc:
+        return JsonResponse({"detail": json.loads(exc.json(include_url=False))}, status=422)
+    except {{.Class}}ConflictError as exc:
+        return JsonResponse({"detail": str(exc)}, status=409)
+
+
+urlpatterns = [
+    path("", list_or_create),
+    path("<int:item_id>/", detail),
+]

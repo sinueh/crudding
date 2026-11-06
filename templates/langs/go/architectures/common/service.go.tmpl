@@ -20,6 +20,7 @@ type {{if eq .Architecture "modular"}}Service{{else}}{{.Class}}Service{{end}} in
 	Create(req {{if eq .Architecture "layered"}}types.{{end}}Create{{.Class}}Request) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error)
 	List() ([]{{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error)
 	GetByID(id uint) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error)
+	Update(id uint, req {{if eq .Architecture "layered"}}types.{{end}}Create{{.Class}}Request) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error)
 	Delete(id uint) error
 }
 
@@ -134,6 +135,34 @@ func (s *{{.VarName}}Service) GetByID(id uint) ({{if eq .Architecture "layered"}
 	}, nil
 }
 
+func (s *{{.VarName}}Service) Update(id uint, req {{if eq .Architecture "layered"}}types.{{end}}Create{{.Class}}Request) ({{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response, error) {
+	if s.db != nil {
+		res, err := s.db.Exec("UPDATE {{.VarName}} SET name = {{if eq .Database "mysql"}}?{{else}}$1{{end}} WHERE id = {{if eq .Database "mysql"}}?{{else}}$2{{end}}", req.Name, id)
+		if err != nil {
+			return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, err
+		}
+		if affected, err := res.RowsAffected(); err == nil && affected == 0 {
+			return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, Err{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}NotFound
+		}
+		return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{ID: id, Name: req.Name}, nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	item, exists := s.items[id]
+	if !exists {
+		return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{}, Err{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}NotFound
+	}
+	item.Name = req.Name
+	s.items[id] = item
+
+	return {{if eq .Architecture "layered"}}types.{{end}}{{.Class}}Response{
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
+}
+
 func (s *{{.VarName}}Service) Delete(id uint) error {
 	if s.db != nil {
 		res, err := s.db.Exec("DELETE FROM {{.VarName}} WHERE id = $1", id)
@@ -202,6 +231,22 @@ func (s *{{.VarName}}Service) List() ([]domain.{{.Class}}Response, error) {
 func (s *{{.VarName}}Service) GetByID(id uint) (domain.{{.Class}}Response, error) {
 	item, err := s.repo.FindByID(id)
 	if err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+
+	return domain.{{.Class}}Response{
+		ID:   item.ID,
+		Name: item.Name,
+	}, nil
+}
+
+func (s *{{.VarName}}Service) Update(id uint, req domain.Create{{.Class}}Request) (domain.{{.Class}}Response, error) {
+	item, err := s.repo.FindByID(id)
+	if err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+	item.Name = req.Name
+	if err := s.repo.Update(item); err != nil {
 		return domain.{{.Class}}Response{}, err
 	}
 

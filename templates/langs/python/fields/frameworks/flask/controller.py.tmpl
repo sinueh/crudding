@@ -1,0 +1,65 @@
+import json
+
+from flask import Blueprint, jsonify, request
+from pydantic import ValidationError
+import {{.Modules.service}} as service
+from {{.Modules.model}} import {{.Class}}ConflictError
+
+router = Blueprint("{{.Name}}", __name__)
+
+
+def _not_found(item_id: int):
+    return jsonify({"detail": f"{{.Class}} {item_id} not found"}), 404
+
+
+def _invalid(exc: ValidationError):
+    return jsonify({"detail": json.loads(exc.json(include_url=False))}), 422
+
+
+@router.get("/")
+def list_all():
+    return jsonify(service.list_all())
+
+
+@router.get("/<int:item_id>")
+def get_by_id(item_id: int):
+    item = service.get(item_id)
+    if item is None:
+        return _not_found(item_id)
+    return jsonify(item)
+
+
+@router.post("/")
+def create():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(service.create(payload)), 201
+    except ValidationError as exc:
+        return _invalid(exc)
+    except {{.Class}}ConflictError as exc:
+        return jsonify({"detail": str(exc)}), 409
+
+
+@router.patch("/<int:item_id>")
+def update(item_id: int):
+    payload = request.get_json(silent=True) or {}
+    try:
+        item = service.update(item_id, payload)
+    except ValidationError as exc:
+        return _invalid(exc)
+    except {{.Class}}ConflictError as exc:
+        return jsonify({"detail": str(exc)}), 409
+    if item is None:
+        return _not_found(item_id)
+    return jsonify(item)
+
+
+@router.delete("/<int:item_id>")
+def delete(item_id: int):
+    try:
+        deleted = service.delete(item_id)
+    except {{.Class}}ConflictError as exc:
+        return jsonify({"detail": str(exc)}), 409
+    if not deleted:
+        return _not_found(item_id)
+    return "", 204

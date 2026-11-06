@@ -1,0 +1,163 @@
+{{- $tq := "" }}{{ $mq := "" }}
+{{- if eq .Architecture "layered" }}{{ $tq = "types." }}{{ $mq = "models." }}{{ end -}}
+{{- if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch") -}}
+package application
+
+import (
+	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+)
+
+type {{.VarName}}Service struct {
+	repo ports.{{.Class}}Repository
+}
+
+func New{{.Class}}Service(repo ports.{{.Class}}Repository) ports.{{.Class}}Service {
+	return &{{.VarName}}Service{repo: repo}
+}
+
+func (s *{{.VarName}}Service) Create(req domain.Create{{.Class}}Request) (domain.{{.Class}}Response, error) {
+	item := domain.{{.Class}}{
+{{- range .Fields }}
+		{{.Name}}: {{ if .Nullable }}req.{{.Name}}{{ else }}*req.{{.Name}}{{ end }},
+{{- end }}
+	}
+	if err := s.repo.Create(&item); err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+	return s.GetByID(item.ID)
+}
+
+func (s *{{.VarName}}Service) List() ([]domain.{{.Class}}Response, error) {
+	items, err := s.repo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+	res := make([]domain.{{.Class}}Response, 0, len(items))
+	for _, item := range items {
+		res = append(res, s.response(item))
+	}
+	return res, nil
+}
+
+func (s *{{.VarName}}Service) GetByID(id uint) (domain.{{.Class}}Response, error) {
+	item, err := s.repo.FindByID(id)
+	if err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+	return s.response(*item), nil
+}
+
+func (s *{{.VarName}}Service) Update(id uint, req domain.Update{{.Class}}Request) (domain.{{.Class}}Response, error) {
+	item, err := s.repo.FindByID(id)
+	if err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+{{- template "go-apply" (dict "D" . "Item" "item") }}
+	if err := s.repo.Update(item); err != nil {
+		return domain.{{.Class}}Response{}, err
+	}
+	return s.GetByID(id)
+}
+
+func (s *{{.VarName}}Service) Delete(id uint) error {
+	return s.repo.Delete(id)
+}
+
+func (s *{{.VarName}}Service) response(item domain.{{.Class}}) domain.{{.Class}}Response {
+	return domain.{{.Class}}Response{
+		ID: item.ID,
+{{- range .Fields }}
+		{{.Name}}: item.{{.Name}},
+{{- end }}
+	}
+}
+{{- else -}}
+package {{if eq .Architecture "modular"}}{{.Package}}{{else if eq .Architecture "flat"}}main{{else}}service{{end}}
+
+import (
+{{- template "go-store-imports" . }}
+	"errors"
+{{- if eq .Architecture "layered" }}
+
+	"{{.GoModule}}/internal/models"
+	"{{.GoModule}}/internal/types"
+{{- end }}
+)
+{{ template "go-errors" . }}
+
+type {{ template "svcname" . }} interface {
+	Create(req {{$tq}}Create{{.Class}}Request) ({{$tq}}{{.Class}}Response, error)
+	List() ([]{{$tq}}{{.Class}}Response, error)
+	GetByID(id uint) ({{$tq}}{{.Class}}Response, error)
+	Update(id uint, req {{$tq}}Update{{.Class}}Request) ({{$tq}}{{.Class}}Response, error)
+	Delete(id uint) error
+}
+
+type {{.VarName}}Service struct {
+{{- template "go-store-fields" (dict "D" . "M" (printf "%s%s" $mq .Class)) }}
+}
+
+func New{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}Service(dbs ...*sql.DB) {{ template "svcname" . }} {
+{{- template "go-store-new" (dict "D" . "Recv" (printf "%sService" .VarName) "M" (printf "%s%s" $mq .Class)) }}
+}
+
+func (s *{{.VarName}}Service) Create(req {{$tq}}Create{{.Class}}Request) ({{$tq}}{{.Class}}Response, error) {
+	item := {{$mq}}{{.Class}}{
+{{- range .Fields }}
+		{{.Name}}: {{ if .Nullable }}req.{{.Name}}{{ else }}*req.{{.Name}}{{ end }},
+{{- end }}
+	}
+	if err := s.insert(&item); err != nil {
+		return {{$tq}}{{.Class}}Response{}, err
+	}
+	// Relê o registro para devolver os valores como o banco gravou (ex.: decimais).
+	return s.GetByID(item.ID)
+}
+
+func (s *{{.VarName}}Service) List() ([]{{$tq}}{{.Class}}Response, error) {
+	items, err := s.findAll()
+	if err != nil {
+		return nil, err
+	}
+	res := make([]{{$tq}}{{.Class}}Response, 0, len(items))
+	for _, item := range items {
+		res = append(res, s.response(item))
+	}
+	return res, nil
+}
+
+func (s *{{.VarName}}Service) GetByID(id uint) ({{$tq}}{{.Class}}Response, error) {
+	item, err := s.find(id)
+	if err != nil {
+		return {{$tq}}{{.Class}}Response{}, err
+	}
+	return s.response(*item), nil
+}
+
+func (s *{{.VarName}}Service) Update(id uint, req {{$tq}}Update{{.Class}}Request) ({{$tq}}{{.Class}}Response, error) {
+	item, err := s.find(id)
+	if err != nil {
+		return {{$tq}}{{.Class}}Response{}, err
+	}
+{{- template "go-apply" (dict "D" . "Item" "item") }}
+	if err := s.save(item); err != nil {
+		return {{$tq}}{{.Class}}Response{}, err
+	}
+	return s.GetByID(id)
+}
+
+func (s *{{.VarName}}Service) Delete(id uint) error {
+	return s.remove(id)
+}
+
+func (s *{{.VarName}}Service) response(item {{$mq}}{{.Class}}) {{$tq}}{{.Class}}Response {
+	return {{$tq}}{{.Class}}Response{
+		ID: item.ID,
+{{- range .Fields }}
+		{{.Name}}: item.{{.Name}},
+{{- end }}
+	}
+}
+{{ template "go-store" (dict "D" . "Recv" (printf "%sService" .VarName) "M" (printf "%s%s" $mq .Class) "NotFound" (include "notfound" .) "Conflict" (include "conflict" .)) }}
+{{- end }}

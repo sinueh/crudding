@@ -33,6 +33,7 @@ func SetupRouter(dbs ...*sql.DB) *http.ServeMux {
 {{end}}	mux.HandleFunc("POST /api/v1/{{.VarName}}", {{.VarName}}Handler.Create)
 	mux.HandleFunc("GET /api/v1/{{.VarName}}", {{.VarName}}Handler.List)
 	mux.HandleFunc("GET /api/v1/{{.VarName}}/{id}", {{.VarName}}Handler.GetByID)
+	mux.HandleFunc("PATCH /api/v1/{{.VarName}}/{id}", {{.VarName}}Handler.Update)
 	mux.HandleFunc("DELETE /api/v1/{{.VarName}}/{id}", {{.VarName}}Handler.Delete)
 
 	return mux

@@ -1,0 +1,39 @@
+import json
+
+from pydantic import ValidationError
+import {{.Modules.service}} as service
+from {{.Modules.model}} import {{.Class}}ConflictError
+
+
+def handle(handler, method: str, parts: list[str]):
+    try:
+        if not parts:
+            if method == "GET":
+                handler.send_json(200, service.list_all())
+                return
+            if method == "POST":
+                handler.send_json(201, service.create(handler.read_json()))
+                return
+        elif len(parts) == 1 and parts[0].isdigit():
+            item_id = int(parts[0])
+            not_found = {"detail": f"{{.Class}} {item_id} not found"}
+            if method == "GET":
+                item = service.get(item_id)
+                handler.send_json(200, item) if item is not None else handler.send_json(404, not_found)
+                return
+            if method == "PATCH":
+                item = service.update(item_id, handler.read_json())
+                handler.send_json(200, item) if item is not None else handler.send_json(404, not_found)
+                return
+            if method == "DELETE":
+                if not service.delete(item_id):
+                    handler.send_json(404, not_found)
+                    return
+                handler.send_response(204)
+                handler.end_headers()
+                return
+        handler.send_json(404, {"detail": "not found"})
+    except ValidationError as exc:
+        handler.send_json(422, {"detail": json.loads(exc.json(include_url=False))})
+    except {{.Class}}ConflictError as exc:
+        handler.send_json(409, {"detail": str(exc)})

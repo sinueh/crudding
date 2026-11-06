@@ -1,0 +1,56 @@
+from fastapi import APIRouter, HTTPException, Response, status
+import {{.Modules.service}} as service
+from {{.Modules.model}} import {{.Class}}ConflictError, {{.Class}}In, {{.Class}}Out, {{.Class}}Patch
+
+router = APIRouter()
+
+
+def _not_found(item_id: int) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{{.Class}} {item_id} not found")
+
+
+def _conflict(exc: {{.Class}}ConflictError) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.get("/", response_model=list[{{.Class}}Out])
+def list_all():
+    return service.list_all()
+
+
+@router.get("/{item_id}", response_model={{.Class}}Out)
+def get_by_id(item_id: int):
+    item = service.get(item_id)
+    if item is None:
+        raise _not_found(item_id)
+    return item
+
+
+@router.post("/", response_model={{.Class}}Out, status_code=status.HTTP_201_CREATED)
+def create(payload: {{.Class}}In):
+    try:
+        return service.create(payload.model_dump())
+    except {{.Class}}ConflictError as exc:
+        raise _conflict(exc) from exc
+
+
+@router.patch("/{item_id}", response_model={{.Class}}Out)
+def update(item_id: int, payload: {{.Class}}Patch):
+    try:
+        item = service.update(item_id, payload.model_dump(exclude_unset=True))
+    except {{.Class}}ConflictError as exc:
+        raise _conflict(exc) from exc
+    if item is None:
+        raise _not_found(item_id)
+    return item
+
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete(item_id: int):
+    try:
+        deleted = service.delete(item_id)
+    except {{.Class}}ConflictError as exc:
+        raise _conflict(exc) from exc
+    if not deleted:
+        raise _not_found(item_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

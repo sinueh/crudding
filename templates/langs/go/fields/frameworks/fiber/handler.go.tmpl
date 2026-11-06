@@ -1,0 +1,101 @@
+{{- $h := include "handler" . }}{{ $tq := include "tq" . }}{{ $eq := include "errq" . -}}
+package {{ template "pkg-handler" . }}
+
+import (
+	"errors"
+	"strconv"
+
+{{if eq .Architecture "layered"}}	"{{.GoModule}}/internal/service"
+	"{{.GoModule}}/internal/types"
+{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+{{end}}	"github.com/gofiber/fiber/v2"
+)
+
+type {{$h}} struct {
+	svc {{ template "iface" . }}
+}
+
+func New{{$h}}(svc {{ template "iface" . }}) *{{$h}} {
+	return &{{$h}}{svc: svc}
+}
+
+// fail responde 404, 409 ou 500 conforme o erro do service.
+func (h *{{$h}}) fail(c *fiber.Ctx, err error) error {
+	switch {
+	case errors.Is(err, {{$eq}}{{ template "notfound" . }}):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "{{.VarName}} não encontrado"})
+	case errors.Is(err, {{$eq}}{{ template "conflict" . }}):
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "erro interno"})
+}
+
+func badRequest{{.Class}}(c *fiber.Ctx, err error) error {
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+}
+
+func (h *{{$h}}) Create(c *fiber.Ctx) error {
+	var req {{$tq}}Create{{.Class}}Request
+	if err := c.BodyParser(&req); err != nil {
+		return badRequest{{.Class}}(c, err)
+	}
+	if err := req.Validate(); err != nil {
+		return badRequest{{.Class}}(c, err)
+	}
+	res, err := h.svc.Create(req)
+	if err != nil {
+		return h.fail(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(res)
+}
+
+func (h *{{$h}}) List(c *fiber.Ctx) error {
+	res, err := h.svc.List()
+	if err != nil {
+		return h.fail(c, err)
+	}
+	return c.JSON(res)
+}
+
+func (h *{{$h}}) GetByID(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id inválido"})
+	}
+	res, err := h.svc.GetByID(uint(id))
+	if err != nil {
+		return h.fail(c, err)
+	}
+	return c.JSON(res)
+}
+
+func (h *{{$h}}) Update(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id inválido"})
+	}
+	var req {{$tq}}Update{{.Class}}Request
+	if err := c.BodyParser(&req); err != nil {
+		return badRequest{{.Class}}(c, err)
+	}
+	if err := req.Validate(); err != nil {
+		return badRequest{{.Class}}(c, err)
+	}
+	res, err := h.svc.Update(uint(id), req)
+	if err != nil {
+		return h.fail(c, err)
+	}
+	return c.JSON(res)
+}
+
+func (h *{{$h}}) Delete(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id inválido"})
+	}
+	if err := h.svc.Delete(uint(id)); err != nil {
+		return h.fail(c, err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}

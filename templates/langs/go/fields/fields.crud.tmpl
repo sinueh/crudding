@@ -1,0 +1,7 @@
+{
+  "files": [
+    { "from": "tests/endpoint_test.go.tmpl", "to": "{{if eq .Architecture "flat"}}{{.VarName}}_routes_test.go{{else}}internal/routes/{{.VarName}}_test.go{{end}}" }
+  ],
+  "packages": [],
+  "append": []
+}

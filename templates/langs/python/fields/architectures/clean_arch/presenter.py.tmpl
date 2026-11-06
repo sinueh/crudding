@@ -1,0 +1,7 @@
+from dataclasses import asdict
+
+from {{.Modules.model}} import {{.Class}}, {{.Class}}Out
+
+
+def present_{{.Name}}(item: {{.Class}}) -> dict:
+    return {{.Class}}Out.model_validate(asdict(item)).model_dump(mode="json")

@@ -1,0 +1,117 @@
+{{- define "py-store-imports" -}}
+{{- if eq .Endpoint.Store "sql" -}}
+from contextlib import closing
+from uuid import UUID
+
+{{ if eq .Endpoint.Dialect "mysql" }}from pymysql.err import IntegrityError{{ else }}from psycopg2 import IntegrityError{{ end }}
+
+{{ if eq .ORM "sqlalchemy" }}from {{.Modules.config}} import engine{{ else }}from {{.Modules.config}} import get_connection{{ end }}
+{{- else -}}
+import itertools
+import threading
+{{- end }}
+{{- end }}
+
+{{- define "py-store" -}}
+{{- if eq .Endpoint.Store "sql" -}}
+_COLUMNS = ({{range .Fields}}"{{.Column}}", {{end}})
+_SELECT = {{.Endpoint.SQL.Select}}
+_SELECT_ONE = {{.Endpoint.SQL.SelectOne}}
+_INSERT = {{.Endpoint.SQL.Insert}}
+_UPDATE = {{.Endpoint.SQL.Update}}
+_DELETE = {{.Endpoint.SQL.Delete}}
+
+
+def _connect():
+    return {{ if eq .ORM "sqlalchemy" }}engine.raw_connection(){{ else }}get_connection(){{ end }}
+
+
+def _execute(query: str, params: tuple = (), fetch: bool = False) -> tuple[list[dict], int, int | None]:
+    """Executa query numa conexão nova; devolve (linhas, rowcount, lastrowid)."""
+    with closing(_connect()) as connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query, params)
+            rows = []
+            if fetch:
+                columns = [column[0] for column in cursor.description]
+                rows = [row if isinstance(row, dict) else dict(zip(columns, row)) for row in cursor.fetchall()]
+            connection.commit()
+            return rows, cursor.rowcount, cursor.lastrowid
+        except IntegrityError as exc:
+            connection.rollback()
+            raise {{.Class}}ConflictError(str(exc)) from exc
+        finally:
+            cursor.close()
+
+
+def _params(data: dict) -> tuple:
+    return tuple(str(data[column]) if isinstance(data[column], UUID) else data[column] for column in _COLUMNS)
+
+
+def _select_all() -> list[dict]:
+    rows, _, _ = _execute(_SELECT, fetch=True)
+    return rows
+
+
+def _select_one(item_id: int) -> dict | None:
+    rows, _, _ = _execute(_SELECT_ONE, (item_id,), fetch=True)
+    return rows[0] if rows else None
+
+
+def _insert(data: dict) -> int:
+{{- if .Endpoint.SQL.Returning }}
+    rows, _, _ = _execute(_INSERT, _params(data), fetch=True)
+    return rows[0]["id"]
+{{- else }}
+    _, _, last_id = _execute(_INSERT, _params(data))
+    return last_id
+{{- end }}
+
+
+def _update(item_id: int, data: dict) -> None:
+    _execute(_UPDATE, _params(data) + (item_id,))
+
+
+def _delete(item_id: int) -> bool:
+    _, count, _ = _execute(_DELETE, (item_id,))
+    return count > 0
+{{- else -}}
+{{ if .Database }}# TODO: o crudding ainda não gera acesso a dados para {{.Database}}; troque este armazenamento em memória.
+{{ else }}# Projeto sem banco de dados: os registros ficam em memória (crudding add db <postgres|mysql>).
+{{ end -}}
+_COLUMNS = ({{range .Fields}}"{{.Column}}", {{end}})
+_lock = threading.Lock()
+_items: dict[int, dict] = {}
+_ids = itertools.count(1)
+
+
+def _select_all() -> list[dict]:
+    with _lock:
+        return [dict(row) for _, row in sorted(_items.items())]
+
+
+def _select_one(item_id: int) -> dict | None:
+    with _lock:
+        row = _items.get(item_id)
+        return dict(row) if row is not None else None
+
+
+def _insert(data: dict) -> int:
+    with _lock:
+        item_id = next(_ids)
+        _items[item_id] = {"id": item_id, **{column: data[column] for column in _COLUMNS}}
+        return item_id
+
+
+def _update(item_id: int, data: dict) -> None:
+    with _lock:
+        if item_id in _items:
+            _items[item_id] = {"id": item_id, **{column: data[column] for column in _COLUMNS}}
+
+
+def _delete(item_id: int) -> bool:
+    with _lock:
+        return _items.pop(item_id, None) is not None
+{{- end }}
+{{- end }}

@@ -1,0 +1,57 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from {{.EntryModule}} import app
+
+client = TestClient(app)
+PAYLOAD = {{.Endpoint.SamplePayload}}
+{{- if eq .Endpoint.Store "sql" }}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _database():
+    """Os testes usam o banco configurado: pulados se ele estiver fora do ar."""
+    try:
+{{- if eq .ORM "sqlalchemy" }}
+        from {{.Modules.config}} import engine
+
+        engine.raw_connection().close()
+{{- else }}
+        from {{.Modules.config}} import get_connection
+
+        get_connection().close()
+{{- end }}
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"banco de dados indisponível: {exc}")
+{{- end }}
+{{- if .Endpoint.HasRequired }}
+
+
+def test_create_rejects_missing_fields():
+    assert client.post("/{{.Route}}/", json={}).status_code == 422
+{{- end }}
+
+
+def test_get_missing_returns_404():
+    assert client.get("/{{.Route}}/999999999").status_code == 404
+{{- if not .Endpoint.HasRequiredRef }}
+
+
+def test_crud():
+    created = client.post("/{{.Route}}/", json=PAYLOAD)
+    assert created.status_code == 201, created.text
+    item_id = created.json()["id"]
+
+    assert client.get(f"/{{.Route}}/{item_id}").status_code == 200
+    assert any(item["id"] == item_id for item in client.get("/{{.Route}}/").json())
+
+    updated = client.patch(f"/{{.Route}}/{item_id}", json={{.Endpoint.UpdatePayload}})
+    assert updated.status_code == 200, updated.text
+
+    assert client.delete(f"/{{.Route}}/{item_id}").status_code == 204
+    assert client.get(f"/{{.Route}}/{item_id}").status_code == 404
+{{- else }}
+
+# test_crud não foi gerado: os campos ref obrigatórios precisam de registros
+# existentes nas tabelas referenciadas.
+{{- end }}
