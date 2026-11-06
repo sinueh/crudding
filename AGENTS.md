@@ -42,8 +42,6 @@ crudding/
 ├── cmd/
 │   └── crudding/
 │       └── main.go              # Ponto de entrada mínimo (delega para internal/cli)
-│   └── crd/
-│       └── main.go              # Ponto de entrada abreviado crd (delega para internal/cli)
 │   └── genall/
 │       └── main.go              # Gera todas as combinações suportadas para validação
 ├── internal/
@@ -186,8 +184,6 @@ Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`f
 ```sh
 # Executar a CLI em desenvolvimento
 go run ./cmd/crudding
-# ou versão abreviada
-go run ./cmd/crd
 
 # Salvar projeto como template e listar
 go run /caminho/do/crudding/cmd/crudding add template ./meu-projeto meu-template
@@ -200,10 +196,8 @@ go run /caminho/do/crudding/cmd/crudding add endpoint
 # Executar testes unitários
 go test ./...
 
-# Instalar os binários localmente (crudding e crd)
-go install ./cmd/crudding ./cmd/crd
-# ou via Makefile
-make install
+# Instalar o binário localmente
+go install ./cmd/crudding
 ```
 
 ### Nota sobre Ambientes em Containers / Flatpak (OSTree)

@@ -121,7 +121,7 @@ crudding template import ./meu-template.zip
 When modifying the `crudding` source code:
 
 1. **Key Packages:**
-   - `cmd/crudding/main.go` & `cmd/crd/main.go`: CLI entrypoints (`crudding` and abbreviated `crd`).
+   - `cmd/crudding/main.go`: CLI entrypoint.
    - `internal/cli/`: Command routing (`cli.go`) and subcommand handlers (`new.go`, `add_endpoint.go`, `remove_endpoint.go`, `add_db.go`, `init.go`, `add_template.go`, `template.go`, `info.go`, `list.go`).
    - `internal/generator/`: Manifest-driven scaffold & patch engine (`common/`, `custom/`, `langs/golang/`, `langs/python/`, `langs/node/`).
    - `internal/manifest/manifest.go`: `project.crud` JSON schema, normalization, and parent-directory lookup.
