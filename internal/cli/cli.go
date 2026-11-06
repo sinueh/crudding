@@ -96,6 +96,11 @@ var commands = []Command{
 		Run:     runAddDB,
 	},
 	{
+		Args:    "add auth",
+		Summary: "adiciona autenticação completa (jwt, session, api-key) ao projeto atual (lê o project.crud)",
+		Run:     runAddAuth,
+	},
+	{
 		Args:    "add skill",
 		Summary: "instala a skill do crudding em .agents/skills/crudding/SKILL.md baixando o AGENTS.md remoto",
 		Run:     runAddSkill,

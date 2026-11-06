@@ -71,6 +71,9 @@ func (g goLang) completeField(field fields.Field, view *fieldView) {
 	column := field.Column()
 	name := g.FieldName(field)
 	goType := g.Type(field)
+	if field.Type == "ref" && (field.Ref() == "user" || field.Ref() == "users") {
+		goType = "string"
+	}
 	modelType := goType
 	if field.Nullable {
 		modelType = "*" + goType

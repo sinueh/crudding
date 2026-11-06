@@ -60,6 +60,9 @@ func printInfoReport(stdout io.Writer, root string, m manifest.Manifest) {
 	if m.ORM != "" {
 		fmt.Fprintf(stdout, "ORM: %s\n", m.ORM)
 	}
+	if m.HasAuth() {
+		fmt.Fprintf(stdout, "Autenticação: %s (hasher: %s, roles: %s)\n", m.Auth.Strategy, m.Auth.Hasher, strings.Join(m.Auth.Roles, ", "))
+	}
 
 	fmt.Fprintf(stdout, "\nEndpoints (%d):\n", len(m.Endpoints))
 	if len(m.Endpoints) == 0 {
@@ -81,6 +84,7 @@ type projectInfo struct {
 	Architecture     string                `json:"architecture"`
 	Databases        []string              `json:"databases"`
 	ORM              string                `json:"orm,omitempty"`
+	Auth             *manifest.AuthSpec    `json:"auth,omitempty"`
 	Endpoints        []string              `json:"endpoints"`
 	Routes           []string              `json:"routes"`
 	TemplateEndpoint manifest.EndpointSpec `json:"template_endpoint"`
@@ -104,6 +108,7 @@ func newProjectInfo(root string, m manifest.Manifest) projectInfo {
 		Architecture:     m.Architecture,
 		Databases:        append([]string{}, databases...),
 		ORM:              m.ORM,
+		Auth:             m.Auth,
 		Endpoints:        append([]string{}, m.Endpoints...),
 		Routes:           routes,
 		TemplateEndpoint: m.TemplateEndpoint,

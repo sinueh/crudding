@@ -55,6 +55,7 @@ type typedEndpoint struct {
 	lang    TypedLanguage
 	name    string
 	fields  []fields.Field
+	opts    EndpointOptions
 	langFS  fs.FS
 	sources map[string]string // arquivo do exemplo -> template de origem
 	data    map[string]any
@@ -72,8 +73,24 @@ func ParseEndpointFields(specs []string) ([]fields.Field, error) {
 // gerando model, schemas, acesso a dados, controller, migração e teste. Sem
 // campos, é o mesmo que AddEndpoint. Devolve também avisos para o usuário.
 func AddTypedEndpoint(root string, m manifest.Manifest, name string, specs []string, templates fs.FS) (common.Result, []string, error) {
-	if len(specs) == 0 {
-		result, err := AddEndpoint(root, m, name)
+	return AddTypedEndpointWithOptions(root, m, EndpointOptions{Name: name, Specs: specs}, templates)
+}
+
+// AddTypedEndpointWithOptions cria o endpoint tipado com opções adicionais de proteção e propriedade.
+func AddTypedEndpointWithOptions(root string, m manifest.Manifest, opts EndpointOptions, templates fs.FS) (common.Result, []string, error) {
+	if (opts.Protected || len(opts.Roles) > 0 || opts.Owner) && !m.HasAuth() {
+		return common.Result{}, nil, fmt.Errorf("o projeto não possui autenticação configurada; use 'crudding add auth' antes de usar --protected, --roles ou --owner")
+	}
+	if opts.Owner {
+		hasUserRef := slices.ContainsFunc(opts.Specs, func(s string) bool {
+			return strings.HasPrefix(s, "user:") || strings.HasPrefix(s, "user_id:")
+		})
+		if !hasUserRef {
+			opts.Specs = append(opts.Specs, "user:ref")
+		}
+	}
+	if len(opts.Specs) == 0 {
+		result, err := AddEndpointWithOptions(root, m, opts)
 		return result, nil, err
 	}
 	m = current(root, m)
@@ -84,20 +101,23 @@ func AddTypedEndpoint(root string, m manifest.Manifest, name string, specs []str
 	if lang, ok := TypedLanguageFor(m.Language); ok {
 		reserved = lang.Reserved()
 	}
-	list, err := fields.Parse(specs, reserved...)
+	list, err := fields.Parse(opts.Specs, reserved...)
 	if err != nil {
 		return common.Result{}, nil, err
 	}
-	if m.HasEndpoint(name) {
-		return common.Result{}, nil, fmt.Errorf("endpoint %q já existe no %s", name, manifest.FileName)
+	if m.HasEndpoint(opts.Name) {
+		return common.Result{}, nil, fmt.Errorf("endpoint %q já existe no %s", opts.Name, manifest.FileName)
 	}
 	for _, ref := range fields.Refs(list) {
-		if ref != name && len(m.EndpointFields[ref]) == 0 {
+		if ref != opts.Name && len(m.EndpointFields[ref]) == 0 {
+			if m.HasAuth() && (ref == "user" || ref == "users" || (m.Auth != nil && ref == m.Auth.UserEntity)) {
+				continue
+			}
 			return common.Result{}, nil, fmt.Errorf("campo %s:ref: o endpoint %q não tem tabela gerada pelo crudding; crie-o antes com campos (crudding add endpoint %s campo:tipo...)", ref, ref, ref)
 		}
 	}
 
-	typed, err := newTypedEndpoint(root, m, name, list, templates)
+	typed, err := newTypedEndpointWithOptions(root, m, opts, list, templates)
 	if err != nil {
 		return common.Result{}, nil, err
 	}
@@ -110,8 +130,9 @@ func AddTypedEndpoint(root string, m manifest.Manifest, name string, specs []str
 		return common.Result{}, nil, err
 	}
 
-	m.AddEndpoint(name)
-	m.SetEndpointFields(name, fields.Specs(list))
+	m.AddEndpoint(opts.Name)
+	m.SetEndpointFields(opts.Name, fields.Specs(list))
+	m.SetEndpointAuth(opts.Name, opts.Protected, opts.Roles, opts.Owner)
 	if err := common.RecordCreated(&m, result.Created); err != nil {
 		return common.Result{}, nil, err
 	}
@@ -149,6 +170,10 @@ func typedEndpointExtras(root string, m manifest.Manifest, name string, template
 }
 
 func newTypedEndpoint(root string, m manifest.Manifest, name string, list []fields.Field, templates fs.FS) (*typedEndpoint, error) {
+	return newTypedEndpointWithOptions(root, m, EndpointOptions{Name: name}, list, templates)
+}
+
+func newTypedEndpointWithOptions(root string, m manifest.Manifest, opts EndpointOptions, list []fields.Field, templates fs.FS) (*typedEndpoint, error) {
 	stack := m.Language + " + " + m.Framework + " + " + m.Architecture
 	unsupported := func(reason string) error {
 		return fmt.Errorf("campos tipados não são suportados para %s ainda (%s); rode sem campos para copiar o endpoint de exemplo", stack, reason)
@@ -168,7 +193,7 @@ func newTypedEndpoint(root string, m manifest.Manifest, name string, list []fiel
 		return nil, unsupported("linguagem sem templates de campos")
 	}
 
-	rename, err := custom.EndpointRenamer(m, name)
+	rename, err := custom.EndpointRenamer(m, opts.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +214,7 @@ func newTypedEndpoint(root string, m manifest.Manifest, name string, list []fiel
 		data[key] = value
 	}
 
-	typed := &typedEndpoint{root: root, m: m, lang: lang, name: name, fields: list, langFS: langFS, sources: sources, data: data, rename: rename}
+	typed := &typedEndpoint{root: root, m: m, lang: lang, name: opts.Name, fields: list, opts: opts, langFS: langFS, sources: sources, data: data, rename: rename}
 	typed.addFieldData()
 
 	recipeContent, err := typed.render(path.Join(fieldsDir, "fields.crud.tmpl"))
@@ -222,7 +247,7 @@ func renderArchitecture(langFS fs.FS, architecture string, data map[string]any) 
 }
 
 func (t *typedEndpoint) patch() (common.Patch, error) {
-	patch, err := custom.EndpointPatch(t.root, t.m, t.name)
+	patch, err := custom.EndpointPatchWithOptions(t.root, t.m, t.name, t.opts.Protected || t.opts.Owner, t.opts.Roles)
 	if err != nil {
 		return common.Patch{}, err
 	}

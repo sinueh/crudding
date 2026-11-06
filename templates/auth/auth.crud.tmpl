@@ -1,0 +1,10 @@
+{
+  "inserts": [
+    {
+      "into": ".env.example",
+      "base": "databases/.env.example.tmpl",
+      "marker": "# crudding:env",
+      "from": "auth/env.tmpl"
+    }
+  ]
+}

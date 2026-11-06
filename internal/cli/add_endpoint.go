@@ -30,8 +30,11 @@ func AddEndpointUsage() string {
 	b.WriteString("    ao banco (postgres/mysql; sem banco, em memória), controller, migração e teste.\n")
 	b.WriteString("    Tipos: " + strings.Join(fields.Types, ", ") + " (ref = chave estrangeira para <nome>, coluna <nome>_id).\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>] [campo:tipo[?] ...] [--json]\n\n")
+	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>] [campo:tipo[?] ...] [--protected] [--roles <roles>] [--owner] [--json]\n\n")
 	b.WriteString("flags:\n")
+	b.WriteString("  --protected      exige autenticação para acessar as rotas do endpoint\n")
+	b.WriteString("  --roles          restringe o endpoint a papéis específicos (RBAC, separados por vírgula)\n")
+	b.WriteString("  --owner          associa o registro ao usuário autenticado (coluna user_id:ref e filtro automático)\n")
 	b.WriteString(jsonFlagUsage)
 	b.WriteString("\n")
 	b.WriteString("exemplos:\n")
@@ -40,26 +43,85 @@ func AddEndpointUsage() string {
 	b.WriteString("  crudding add endpoint n:invoice\n")
 	b.WriteString("  crudding add endpoint product name:str price:decimal image_url:str?\n")
 	b.WriteString("  crudding add endpoint cart_item cart:ref product:ref quantity:int\n")
+	b.WriteString("  crudding add endpoint order total:decimal status:str --protected\n")
+	b.WriteString("  crudding add endpoint audit_log action:str details:text --roles \"admin\"\n")
+	b.WriteString("  crudding add endpoint profile bio:text avatar_url:str? --owner\n")
 	return b.String()
 }
 
 func parseEndpointArgs(args []string) (string, bool, bool, error) {
-	name, _, hasArg, showHelp, err := parseTypedEndpointArgs(args)
-	return name, hasArg, showHelp, err
+	opts, hasArg, showHelp, err := parseTypedEndpointOptions(args)
+	return opts.Name, hasArg, showHelp, err
 }
 
-// parseTypedEndpointArgs é o parseEndpointArgs que aceita campos depois do
-// nome: "product name:str price:decimal".
 func parseTypedEndpointArgs(args []string) (string, []string, bool, bool, error) {
-	name, hasArg, showHelp, err := parseEndpointName(args)
+	opts, hasArg, showHelp, err := parseTypedEndpointOptions(args)
+	return opts.Name, opts.Specs, hasArg, showHelp, err
+}
+
+// parseTypedEndpointOptions extrai o nome, campos tipados e flags de autenticação (--protected, --roles, --owner).
+func parseTypedEndpointOptions(args []string) (generator.EndpointOptions, bool, bool, error) {
+	var opts generator.EndpointOptions
+	if len(args) == 0 {
+		return opts, false, false, nil
+	}
+	for _, token := range args {
+		if slices.Contains(helpFlags, token) {
+			return opts, false, true, nil
+		}
+	}
+
+	var remaining []string
+	for i := 0; i < len(args); i++ {
+		token := args[i]
+		switch {
+		case token == "--protected" || token == "-protected" || token == "protected:true":
+			opts.Protected = true
+		case token == "--owner" || token == "-owner" || token == "owner:true":
+			opts.Owner = true
+			opts.Protected = true
+		case token == "--roles" || token == "-roles":
+			if i+1 < len(args) {
+				i++
+				opts.Roles = parseRolesList(args[i])
+				opts.Protected = true
+			}
+		case strings.HasPrefix(token, "--roles="):
+			opts.Roles = parseRolesList(strings.TrimPrefix(token, "--roles="))
+			opts.Protected = true
+		case strings.HasPrefix(token, "-roles="):
+			opts.Roles = parseRolesList(strings.TrimPrefix(token, "-roles="))
+			opts.Protected = true
+		case strings.HasPrefix(token, "roles:"):
+			opts.Roles = parseRolesList(strings.TrimPrefix(token, "roles:"))
+			opts.Protected = true
+		default:
+			remaining = append(remaining, token)
+		}
+	}
+
+	name, hasArg, showHelp, err := parseEndpointName(remaining)
 	if err != nil || showHelp || !hasArg {
-		return name, nil, hasArg, showHelp, err
+		opts.Name = name
+		return opts, hasArg, showHelp, err
 	}
-	specs := endpointFieldArgs(args)
+	opts.Name = name
+	specs := endpointFieldArgs(remaining)
 	if _, err := generator.ParseEndpointFields(specs); err != nil {
-		return "", nil, false, false, err
+		return opts, false, false, err
 	}
-	return name, specs, true, false, nil
+	opts.Specs = specs
+	return opts, true, false, nil
+}
+
+func parseRolesList(val string) []string {
+	var res []string
+	for _, r := range strings.Split(val, ",") {
+		if trimmed := strings.TrimSpace(r); trimmed != "" {
+			res = append(res, trimmed)
+		}
+	}
+	return res
 }
 
 // endpointFieldArgs devolve os argumentos depois do nome do endpoint.
@@ -121,7 +183,7 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return err
 	}
-	argName, specs, hasArg, showHelp, err := parseTypedEndpointArgs(args)
+	opts, hasArg, showHelp, err := parseTypedEndpointOptions(args)
 	if err != nil {
 		return err
 	}
@@ -145,25 +207,25 @@ func runAddEndpoint(args []string, stdout, _ io.Writer) error {
 		return err
 	}
 
-	name := argName
 	if !hasArg && asJSON {
 		return errJSONNeedsArg("o nome do endpoint")
 	}
 	if !hasArg {
-		name, err = project.ReadEndpointName(os.Stdin, stdout)
+		name, err := project.ReadEndpointName(os.Stdin, stdout)
 		if err != nil {
 			return err
 		}
+		opts.Name = name
 	}
 
-	result, notes, err := generator.AddTypedEndpoint(root, m, name, specs, crudding.Templates)
+	result, notes, err := generator.AddTypedEndpointWithOptions(root, m, opts, crudding.Templates)
 	if err != nil {
 		return err
 	}
-	routes := endpointRoutes(root, m.TemplateEndpoint.Register, name)
+	routes := endpointRoutes(root, m.TemplateEndpoint.Register, opts.Name)
 	report := endpointSummary("add endpoint", root, m, result.Created, nil, result.Modified, routes)
 	if !asJSON {
-		fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
+		fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", opts.Name)
 	}
 	if err := report.write(stdout, asJSON); err != nil {
 		return err

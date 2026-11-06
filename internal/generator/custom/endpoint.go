@@ -47,6 +47,11 @@ func CheckEndpoint(m manifest.Manifest) error {
 // caminhos e no conteúdo e, em cada arquivo de register, duplica as linhas que
 // mencionam o exemplo.
 func EndpointPatch(root string, m manifest.Manifest, name string) (common.Patch, error) {
+	return EndpointPatchWithOptions(root, m, name, false, nil)
+}
+
+// EndpointPatchWithOptions é o EndpointPatch que suporta proteger as rotas com autenticação e roles.
+func EndpointPatchWithOptions(root string, m manifest.Manifest, name string, protected bool, roles []string) (common.Patch, error) {
 	recipe, err := newEndpointRecipe(m, name)
 	if err != nil {
 		return common.Patch{}, err
@@ -74,7 +79,9 @@ func EndpointPatch(root string, m manifest.Manifest, name string) (common.Patch,
 		}
 		patch.Rewrites = append(patch.Rewrites, common.Rewrite{
 			Path: target,
-			Edit: func(content []byte) ([]byte, error) { return recipe.registerLines(root, m, target, name, content) },
+			Edit: func(content []byte) ([]byte, error) {
+				return recipe.registerLinesWithOptions(root, m, target, name, content, protected, roles)
+			},
 		})
 	}
 	return patch, nil
@@ -312,6 +319,76 @@ func (r endpointRecipe) outputs() ([]endpointFile, error) {
 // menciona outro endpoint cujo nome contém o dele.
 func (r endpointRecipe) sampleLine(line string) bool {
 	return r.rename.mentions(line) && !slices.ContainsFunc(r.others, func(form string) bool { return strings.Contains(line, form) })
+}
+
+func (r endpointRecipe) registerLinesWithOptions(root string, m manifest.Manifest, target, name string, content []byte, protected bool, roles []string) ([]byte, error) {
+	updated, err := r.registerLines(root, m, target, name, content)
+	if err != nil {
+		return nil, err
+	}
+	if !protected && len(roles) == 0 {
+		return updated, nil
+	}
+	return protectRegisteredContent(updated, m, name, protected, roles), nil
+}
+
+func protectRegisteredContent(content []byte, m manifest.Manifest, name string, protected bool, roles []string) []byte {
+	text := string(content)
+	lines := strings.Split(text, "\n")
+	roleArgs := `"` + strings.Join(roles, `", "`) + `"`
+
+	switch m.Language {
+	case "python":
+		// FastAPI: include_router(name_router, ..., tags=[...])
+		for i, line := range lines {
+			if strings.Contains(line, name+"_router") && strings.Contains(line, "include_router") {
+				if len(roles) > 0 {
+					lines[i] = strings.TrimSuffix(line, ")") + fmt.Sprintf(", dependencies=[Depends(get_current_user), Depends(require_roles([%s]))])", roleArgs)
+				} else if protected {
+					lines[i] = strings.TrimSuffix(line, ")") + ", dependencies=[Depends(get_current_user)])"
+				}
+			}
+		}
+		res := strings.Join(lines, "\n")
+		authDir := "src.app.auth"
+		if m.Architecture == "flat" || m.Architecture == "clean_arch" {
+			authDir = "src.auth"
+		}
+		if !strings.Contains(res, "get_current_user") {
+			importAuth := fmt.Sprintf("from %s.middlewares.auth import get_current_user, require_roles\nfrom fastapi import Depends", authDir)
+			res = importAuth + "\n" + res
+		}
+		return []byte(res)
+
+	case "go":
+		// Gin / Fiber: api.POST("/" + name, ...
+		for i, line := range lines {
+			if (strings.Contains(line, `"/`+name+`"`) || strings.Contains(line, `"/`+name+`/:id"`)) &&
+				(strings.Contains(line, ".POST(") || strings.Contains(line, ".GET(") || strings.Contains(line, ".PATCH(") || strings.Contains(line, ".DELETE(")) {
+				if len(roles) > 0 {
+					line = strings.Replace(line, name+"Handler.", fmt.Sprintf("authMiddleware.RequireAuth(), authMiddleware.RequireRoles(%s), %sHandler.", roleArgs, name), 1)
+				} else if protected {
+					line = strings.Replace(line, name+"Handler.", fmt.Sprintf("authMiddleware.RequireAuth(), %sHandler.", name), 1)
+				}
+				lines[i] = line
+			}
+		}
+		return []byte(strings.Join(lines, "\n"))
+
+	case "node":
+		for i, line := range lines {
+			if strings.Contains(line, `"/`+name+`"`) && strings.Contains(line, "use(") {
+				if len(roles) > 0 {
+					lines[i] = strings.Replace(line, name+"Router", fmt.Sprintf("requireAuth, requireRoles([%s]), %sRouter", roleArgs, name), 1)
+				} else if protected {
+					lines[i] = strings.Replace(line, name+"Router", fmt.Sprintf("requireAuth, %sRouter", name), 1)
+				}
+			}
+		}
+		return []byte(strings.Join(lines, "\n"))
+	}
+
+	return content
 }
 
 // registerLines registra o novo endpoint em target: usa as linhas do exemplo

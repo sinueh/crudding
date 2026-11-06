@@ -1,0 +1,30 @@
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  role?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+{{if .HasRefresh}}
+export interface RefreshRequest {
+  refreshToken: string;
+}
+{{end}}
+
+export interface AuthResponse {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+{{if .HasRefresh}}  refreshToken?: string;
+{{end}}}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+}

@@ -1,0 +1,24 @@
+import { decodeAccessToken } from "../security/security.js";
+
+export const requireAuth = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Cabeçalho de autorização ausente ou inválido" });
+  }
+  const token = authHeader.substring(7);
+  const payload = decodeAccessToken(token);
+  if (!payload) {
+    return res.status(401).json({ error: "Token inválido ou expirado" });
+  }
+  req.user = payload;
+  next();
+};
+
+export const requireRoles = (allowedRoles: string[]) => {
+  return (req: any, res: any, next: any) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: "Acesso negado: permissões insuficientes" });
+    }
+    next();
+  };
+};

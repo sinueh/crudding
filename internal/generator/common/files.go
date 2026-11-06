@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -49,7 +50,10 @@ func WriteFiles(root string, templates fs.FS, data any, files []File) error {
 // Render renderiza o template templatePath de templates com data. Uma chave
 // ausente em data é erro, para um vars esquecido não virar "<no value>".
 func Render(templates fs.FS, templatePath string, data any) ([]byte, error) {
-	parsed, err := template.New(path.Base(templatePath)).Option("missingkey=error").ParseFS(templates, templatePath)
+	funcs := template.FuncMap{
+		"replace": strings.ReplaceAll,
+	}
+	parsed, err := template.New(path.Base(templatePath)).Option("missingkey=error").Funcs(funcs).ParseFS(templates, templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("ler template %s: %w", templatePath, err)
 	}

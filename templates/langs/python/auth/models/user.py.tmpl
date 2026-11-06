@@ -1,0 +1,25 @@
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
+
+
+@dataclass
+class User:
+    id: str
+    email: str
+    password_hash: str
+    role: str = "user"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+{{if .HasRefresh}}
+@dataclass
+class RefreshToken:
+    id: str
+    user_id: str
+    token_hash: str
+    expires_at: datetime
+    revoked_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+{{end}}

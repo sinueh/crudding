@@ -1,0 +1,19 @@
+export interface User {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+{{if .HasRefresh}}
+export interface RefreshToken {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  revokedAt?: Date;
+  createdAt: Date;
+}
+{{end}}

@@ -39,10 +39,14 @@ type Manifest struct {
 	EndpointFields map[string][]string `json:"endpoint_fields,omitempty"`
 	// TemplateEndpoint, quando preenchido, define como "crudding add/remove endpoint"
 	// cria e remove recursos neste projeto, no lugar do layout da arquitetura.
-	TemplateEndpoint EndpointSpec `json:"template_endpoint"`
-	Database         string       `json:"database,omitempty"`
-	Databases []string     `json:"databases,omitempty"`
-	ORM       string       `json:"orm,omitempty"`
+	TemplateEndpoint   EndpointSpec        `json:"template_endpoint"`
+	Database           string              `json:"database,omitempty"`
+	Databases          []string            `json:"databases,omitempty"`
+	ORM                string              `json:"orm,omitempty"`
+	Auth               *AuthSpec           `json:"auth,omitempty"`
+	ProtectedEndpoints []string            `json:"protected_endpoints,omitempty"`
+	OwnerEndpoints     []string            `json:"owner_endpoints,omitempty"`
+	EndpointRoles      map[string][]string `json:"endpoint_roles,omitempty"`
 	// Vars são os dados próprios da arquitetura usados ao renderizar os
 	// templates (ex.: {{.Class}}). Só existem no project.crud.tmpl.
 	Vars map[string]any `json:"vars,omitempty"`
@@ -117,6 +121,21 @@ func (e EndpointSpec) Defined() bool {
 	return e.Name != "" || len(e.Files) > 0 || len(e.Register) > 0
 }
 
+// AuthSpec registra as configurações do módulo de autenticação gerado.
+type AuthSpec struct {
+	Strategy             string   `json:"strategy"`
+	UserEntity           string   `json:"user_entity,omitempty"`
+	Roles                []string `json:"roles,omitempty"`
+	HasRefresh           bool     `json:"has_refresh,omitempty"`
+	Hasher               string   `json:"hasher,omitempty"`
+	MiddlewareIdentifier string   `json:"middleware_identifier,omitempty"`
+}
+
+// Defined diz se o módulo de autenticação foi configurado.
+func (a *AuthSpec) Defined() bool {
+	return a != nil && a.Strategy != ""
+}
+
 func New(config project.Config, endpoints ...string) Manifest {
 	eps := slices.Clone(endpoints)
 	if eps == nil {
@@ -151,12 +170,67 @@ func (m *Manifest) RemoveEndpoint(name string) bool {
 	if len(m.EndpointFields) == 0 {
 		m.EndpointFields = nil
 	}
+	delete(m.EndpointRoles, name)
+	if len(m.EndpointRoles) == 0 {
+		m.EndpointRoles = nil
+	}
+	m.ProtectedEndpoints = slices.DeleteFunc(m.ProtectedEndpoints, func(s string) bool { return s == name })
+	if len(m.ProtectedEndpoints) == 0 {
+		m.ProtectedEndpoints = nil
+	}
+	m.OwnerEndpoints = slices.DeleteFunc(m.OwnerEndpoints, func(s string) bool { return s == name })
+	if len(m.OwnerEndpoints) == 0 {
+		m.OwnerEndpoints = nil
+	}
 	idx := slices.Index(m.Endpoints, name)
 	if idx < 0 {
 		return false
 	}
 	m.Endpoints = slices.Delete(m.Endpoints, idx, idx+1)
 	return true
+}
+
+// HasAuth informa se o projeto possui autenticação configurada.
+func (m Manifest) HasAuth() bool {
+	return m.Auth != nil && m.Auth.Strategy != ""
+}
+
+// SetAuth configura ou atualiza o módulo de autenticação.
+func (m *Manifest) SetAuth(spec AuthSpec) {
+	if spec.Roles == nil {
+		spec.Roles = []string{}
+	}
+	m.Auth = &spec
+}
+
+// IsProtectedEndpoint informa se o endpoint exige autenticação.
+func (m Manifest) IsProtectedEndpoint(name string) bool {
+	return slices.Contains(m.ProtectedEndpoints, name)
+}
+
+// IsOwnerEndpoint informa se o endpoint é filtrado pelo proprietário.
+func (m Manifest) IsOwnerEndpoint(name string) bool {
+	return slices.Contains(m.OwnerEndpoints, name)
+}
+
+// SetEndpointAuth grava as opções de proteção e proprietário para um endpoint.
+func (m *Manifest) SetEndpointAuth(name string, protected bool, roles []string, owner bool) {
+	if protected || len(roles) > 0 || owner {
+		if !slices.Contains(m.ProtectedEndpoints, name) {
+			m.ProtectedEndpoints = append(m.ProtectedEndpoints, name)
+		}
+	}
+	if len(roles) > 0 {
+		if m.EndpointRoles == nil {
+			m.EndpointRoles = map[string][]string{}
+		}
+		m.EndpointRoles[name] = slices.Clone(roles)
+	}
+	if owner {
+		if !slices.Contains(m.OwnerEndpoints, name) {
+			m.OwnerEndpoints = append(m.OwnerEndpoints, name)
+		}
+	}
 }
 
 // SetEndpointFields grava os campos tipados do endpoint name.
@@ -270,6 +344,9 @@ func (m *Manifest) normalize() {
 		if *list == nil {
 			*list = []string{}
 		}
+	}
+	if m.Auth != nil && m.Auth.Roles == nil {
+		m.Auth.Roles = []string{}
 	}
 }
 

@@ -1,0 +1,18 @@
+{
+  "files": [
+    { "from": "langs/python/auth/models/user.py.tmpl", "to": "{{.AuthDir}}/models/user.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/models/__init__.py" },
+    { "from": "langs/python/auth/schemas/auth.py.tmpl", "to": "{{.AuthDir}}/schemas/auth.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/schemas/__init__.py" },
+    { "from": "langs/python/auth/security/security.py.tmpl", "to": "{{.AuthDir}}/security/security.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/security/__init__.py" },
+    { "from": "langs/python/auth/handlers/auth.py.tmpl", "to": "{{.AuthDir}}/handlers/auth.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/handlers/__init__.py" },
+    { "from": "langs/python/auth/middlewares/auth.py.tmpl", "to": "{{.AuthDir}}/middlewares/auth.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/middlewares/__init__.py" },
+    { "from": "langs/python/architectures/common/__init__.py.tmpl", "to": "{{.AuthDir}}/__init__.py" }
+  ],
+  "append": [
+    { "into": "requirements.txt", "from": "langs/python/auth/requirements.txt.tmpl" }
+  ]
+}
