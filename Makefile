@@ -18,12 +18,10 @@ vet:
 build:
 	mkdir -p "$(BIN_DIR)"
 	$(GO) build -o "$(BIN_DIR)/crudding" ./cmd/crudding
-	$(GO) build -o "$(BIN_DIR)/crd" ./cmd/crd
 	$(GO) build -o "$(BIN_DIR)/genall" ./cmd/genall
 
 install:
 	$(GO) install ./cmd/crudding
-	$(GO) install ./cmd/crd
 
 run:
 	$(GO) run ./cmd/crudding $(ARGS)
