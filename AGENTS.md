@@ -178,6 +178,10 @@ Caminho paralelo ao registry: qualquer projeto vira template, e os templates sã
 
 Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`fs.ValidPath`, `filepath.IsLocal`, `project.crud` reservado), symlinks são rejeitados e o destino não pode ficar dentro da pasta do template. Não relaxe essas verificações.
 
+### Campos tipados (`crudding add endpoint <nome> campo:tipo...`)
+
+Só Python e Go (Node não tem). `generator.AddTypedEndpoint` (`internal/generator/typed_endpoint.go`) usa o mesmo `custom.EndpointPatch` (caminhos das cópias e linhas de `register`), mas troca o conteúdo de cada arquivo: renderiza `templates/langs/<lang>/fields/<from>`, onde `<from>` é o template que gerou o arquivo do exemplo no `architectures/<arch>/project.crud.tmpl`, e aplica a mesma troca de nomes (`custom.EndpointRenamer`). Textos vindos dos campos são protegidos dessa troca (`protect`). `fields/fields.crud.tmpl` lista os extras (teste, pacotes, linhas de `requirements.txt`) e `fields/partials/` tem os `{{define}}` comuns. A sintaxe, os tipos e o SQL (DDL e queries por dialeto) ficam em `internal/generator/fields`. Os campos vão para `endpoint_fields` no `project.crud`; o `remove endpoint` (`RemoveTypedEndpoint`) apaga também o teste e mantém as migrações. Para suportar uma combinação nova, crie o template tipado correspondente: sem ele o comando falha com "campos tipados não são suportados".
+
 ---
 
 ## 4. Comandos e Ambiente de Desenvolvimento

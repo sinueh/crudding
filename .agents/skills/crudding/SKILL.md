@@ -50,17 +50,25 @@ crudding new n:TsApi l:node r:ts f:fastify a:modular
 Run inside a project directory (where `project.crud` exists):
 
 ```sh
-# Add a new CRUD endpoint (snake_case)
-crudding add endpoint <name>
+# Add a new CRUD endpoint (snake_case), optionally with typed fields
+crudding add endpoint <name> [field:type[?] ...]
 
 # Remove an existing CRUD endpoint
 crudding remove endpoint <name>
 ```
 
-- **How it works:** Copies the sample endpoint defined in `project.crud` under `"template_endpoint"` (`name`, `files`, `register`), replacing snake_case, kebab-case, camelCase, and PascalCase identifiers, and duplicates/removes registration lines (routes, imports, DI wiring) in the `register` files.
+- **Typed fields (Python and Go):** pass `name:type` tokens after the name (`?` suffix = optional/nullable) to generate a working CRUD instead of stubs. Types: `str`, `text`, `int`, `float`, `decimal`, `bool`, `date`, `datetime`, `uuid`, `ref` (`cart:ref` = FK to `cart.id`, column `cart_id`; `cart` must already exist with fields). Create referenced endpoints first:
+  ```sh
+  crudding add endpoint product name:str price:decimal image_url:str?
+  crudding add endpoint cart customer:str
+  crudding add endpoint cart_item cart:ref product:ref quantity:int
+  ```
+  Generates model, schemas/validation, data access on the configured postgres/mysql (in-memory without a DB or with mongo), handlers (201/404/409/422-400), `migrations/NNNNNN_create_<name>.up.sql`/`.down.sql` and a test (Go: all frameworks; Python: fastapi). Apply the migrations yourself; don't hand-write these files. Fields are saved in `project.crud` → `endpoint_fields`.
+- **How it works:** Copies the sample endpoint defined in `project.crud` under `"template_endpoint"` (`name`, `files`, `register`), replacing snake_case, kebab-case, camelCase, and PascalCase identifiers, and duplicates/removes registration lines (routes, imports, DI wiring) in the `register` files. With fields, the same files are rendered from `templates/langs/<lang>/fields/` instead of copied.
 - **Constraints:**
   - The sample endpoint itself (e.g., `user` in Go, `resource` in Python) cannot be removed or re-added.
   - Language reserved keywords are rejected.
+  - `remove endpoint` keeps the migrations of a typed endpoint and refuses to remove an endpoint referenced by another `ref`.
 
 ---
 
