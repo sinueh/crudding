@@ -3,4 +3,7 @@
 	} else {
 		db = pgDB
 		defer db.Close()
+		if err := config.MigratePostgres(db, "migrations"); err != nil {
+			log.Printf("Aviso: falha ao aplicar migrações no postgres: %v", err)
+		}
 	}

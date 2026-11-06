@@ -29,3 +29,35 @@ func ConnectPostgres(cfg PostgresConfig) (*sql.DB, error) {
 	return db, nil
 }
 
+// MigratePostgres aplica os arquivos *.up.sql da pasta dir em ordem alfabética.
+func MigratePostgres(db *sql.DB, dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("ler migrações em %s: %w", dir, err)
+	}
+	var files []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".up.sql") {
+			files = append(files, entry.Name())
+		}
+	}
+	slices.Sort(files)
+	for _, name := range files {
+		content, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return fmt.Errorf("ler migração %s: %w", name, err)
+		}
+		for _, stmt := range strings.Split(string(content), ";") {
+			if stmt = strings.TrimSpace(stmt); stmt != "" {
+				if _, err := db.Exec(stmt); err != nil {
+					return fmt.Errorf("aplicar migração %s: %w", name, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
