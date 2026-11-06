@@ -139,6 +139,8 @@ When modifying the `crudding` source code:
 1. **Key Packages:**
    - `cmd/crudding/main.go` & `cmd/crd/main.go`: CLI entrypoints (`crudding` and abbreviated `crd`).
    - `internal/cli/`: Command routing (`cli.go`) and subcommand handlers (`new.go`, `add_endpoint.go`, `remove_endpoint.go`, `add_db.go`, `init.go`, `add_template.go`, `template.go`, `info.go`, `list.go`). `summary.go` builds the post-command summary and `--json` output from the generator results (`common.Result`/`RemoveResult`).
+   - `cmd/crudding/main.go`: CLI entrypoint.
+   - `internal/cli/`: Command routing (`cli.go`) and subcommand handlers (`new.go`, `add_endpoint.go`, `remove_endpoint.go`, `add_db.go`, `init.go`, `add_template.go`, `template.go`, `info.go`, `list.go`).
    - `internal/generator/`: Manifest-driven scaffold & patch engine (`common/`, `custom/`, `langs/golang/`, `langs/python/`, `langs/node/`).
    - `internal/manifest/manifest.go`: `project.crud` JSON schema, normalization, and parent-directory lookup.
    - `templates/langs/<lang>/`: Embedded `.tmpl` files (`frameworks/<fw>/`, `architectures/common/`, `architectures/<arch>/project.crud.tmpl`).
