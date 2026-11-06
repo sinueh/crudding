@@ -1,4 +1,4 @@
-{{- range .Endpoint.PyImports }}
+{{- range .Endpoint.ModelImports }}
 {{.}}
 {{- end }}
 from dataclasses import dataclass
@@ -13,10 +13,10 @@ class {{.Class}}ConflictError(Exception):
 @dataclass
 class {{.Class}}:
 {{- range .Fields }}{{ if .Required }}
-    {{.EntityDecl}}
+    {{.Decl}}
 {{- end }}{{ end }}
 {{- range .Fields }}{{ if .Nullable }}
-    {{.EntityDecl}}
+    {{.Decl}}
 {{- end }}{{ end }}
     id: int | None = None
 
@@ -33,7 +33,7 @@ class {{.Class}}Patch(BaseModel):
 {{- end }}
 {{- if .Endpoint.HasRequired }}
 
-    @field_validator({{.Endpoint.PyRequiredColumns}})
+    @field_validator({{.Endpoint.RequiredColumns}})
     @classmethod
     def _required_not_null(cls, value):
         if value is None:

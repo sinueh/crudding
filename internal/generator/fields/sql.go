@@ -96,7 +96,7 @@ func DropTable(d Dialect, table string) string {
 }
 
 // Queries são as instruções SQL do CRUD de uma tabela, com os placeholders
-// do driver: "%s" (pymysql e psycopg2), "$n" (lib/pq) ou "?" (go-sql-driver).
+// fornecidos pela linguagem: "%s", "$1", "?" ou "@p1".
 type Queries struct {
 	Select    string // todas as linhas, ordenadas por id
 	SelectOne string // uma linha por id
@@ -106,22 +106,14 @@ type Queries struct {
 	Returning bool // Insert devolve o id (postgres); senão use lastrowid
 }
 
-// PythonQueries monta as queries com os placeholders "%s" de pymysql e psycopg2.
-func PythonQueries(d Dialect, table string, list []Field) Queries {
-	return buildQueries(d, table, list, func(int) string { return "%s" }, func(field Field) string { return d.Quote(field.Column()) })
-}
-
-// GoQueries monta as queries para database/sql: "$n" no lib/pq e "?" no
-// go-sql-driver. Colunas date voltam como texto AAAA-MM-DD, para o Scan em
-// string.
-func GoQueries(d Dialect, table string, list []Field) Queries {
-	placeholder := func(n int) string { return fmt.Sprintf("$%d", n) }
-	if d == MySQL {
-		placeholder = func(int) string { return "?" }
-	}
+// BuildQueries monta as instruções SQL do CRUD da tabela usando a função de
+// placeholder da linguagem. Quando dateAsText é true, colunas date voltam como
+// texto AAAA-MM-DD no SELECT (para linguagens que leem date em string).
+func BuildQueries(d Dialect, table string, list []Field, placeholder func(int) string, dateAsText bool) Queries {
+	q := d.Quote
 	selectColumn := func(field Field) string {
-		column := d.Quote(field.Column())
-		if field.Type != "date" {
+		column := q(field.Column())
+		if !dateAsText || field.Type != "date" {
 			return column
 		}
 		if d == MySQL {
@@ -129,11 +121,6 @@ func GoQueries(d Dialect, table string, list []Field) Queries {
 		}
 		return fmt.Sprintf("to_char(%s, 'YYYY-MM-DD')", column)
 	}
-	return buildQueries(d, table, list, placeholder, selectColumn)
-}
-
-func buildQueries(d Dialect, table string, list []Field, placeholder func(int) string, selectColumn func(Field) string) Queries {
-	q := d.Quote
 	selected := []string{q("id")}
 	var columns, values, sets []string
 	for index, field := range list {

@@ -49,14 +49,14 @@ func Test{{.Class}}CRUD(t *testing.T) {
 	var created struct {
 		ID uint `json:"id"`
 	}
-	if err := json.Unmarshal([]byte(expect(http.MethodPost, base, {{.Endpoint.SampleJSON}}, http.StatusCreated)), &created); err != nil {
+	if err := json.Unmarshal([]byte(expect(http.MethodPost, base, {{.Endpoint.SamplePayload}}, http.StatusCreated)), &created); err != nil {
 		t.Fatal(err)
 	}
 	item := fmt.Sprintf("%s/%d", base, created.ID)
 
 	expect(http.MethodGet, item, "", http.StatusOK)
 	expect(http.MethodGet, base, "", http.StatusOK)
-	expect(http.MethodPatch, item, {{.Endpoint.UpdateJSON}}, http.StatusOK)
+	expect(http.MethodPatch, item, {{.Endpoint.UpdatePayload}}, http.StatusOK)
 	expect(http.MethodDelete, item, "", http.StatusNoContent)
 	expect(http.MethodGet, item, "", http.StatusNotFound)
 }

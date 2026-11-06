@@ -19,7 +19,7 @@ func New{{.Class}}Service(repo ports.{{.Class}}Repository) ports.{{.Class}}Servi
 func (s *{{.VarName}}Service) Create(req domain.Create{{.Class}}Request) (domain.{{.Class}}Response, error) {
 	item := domain.{{.Class}}{
 {{- range .Fields }}
-		{{.GoName}}: {{ if .Nullable }}req.{{.GoName}}{{ else }}*req.{{.GoName}}{{ end }},
+		{{.Name}}: {{ if .Nullable }}req.{{.Name}}{{ else }}*req.{{.Name}}{{ end }},
 {{- end }}
 	}
 	if err := s.repo.Create(&item); err != nil {
@@ -68,7 +68,7 @@ func (s *{{.VarName}}Service) response(item domain.{{.Class}}) domain.{{.Class}}
 	return domain.{{.Class}}Response{
 		ID: item.ID,
 {{- range .Fields }}
-		{{.GoName}}: item.{{.GoName}},
+		{{.Name}}: item.{{.Name}},
 {{- end }}
 	}
 }
@@ -105,7 +105,7 @@ func New{{if not (eq .Architecture "modular")}}{{.Class}}{{end}}Service(dbs ...*
 func (s *{{.VarName}}Service) Create(req {{$tq}}Create{{.Class}}Request) ({{$tq}}{{.Class}}Response, error) {
 	item := {{$mq}}{{.Class}}{
 {{- range .Fields }}
-		{{.GoName}}: {{ if .Nullable }}req.{{.GoName}}{{ else }}*req.{{.GoName}}{{ end }},
+		{{.Name}}: {{ if .Nullable }}req.{{.Name}}{{ else }}*req.{{.Name}}{{ end }},
 {{- end }}
 	}
 	if err := s.insert(&item); err != nil {
@@ -155,7 +155,7 @@ func (s *{{.VarName}}Service) response(item {{$mq}}{{.Class}}) {{$tq}}{{.Class}}
 	return {{$tq}}{{.Class}}Response{
 		ID: item.ID,
 {{- range .Fields }}
-		{{.GoName}}: item.{{.GoName}},
+		{{.Name}}: item.{{.Name}},
 {{- end }}
 	}
 }

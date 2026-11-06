@@ -1,6 +1,5 @@
 // Package fields lê os campos tipados de "crudding add endpoint <nome>
-// campo:tipo..." e descreve como cada tipo vira código (Python e Go) e coluna
-// SQL (postgres e mysql).
+// campo:tipo..." e gera o DDL e as queries SQL por dialeto (postgres e mysql).
 package fields
 
 import (
@@ -24,25 +23,10 @@ type Field struct {
 
 var namePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`)
 
-// reserved são nomes que quebrariam o código gerado: palavras reservadas de
-// Python e Go, atributos do BaseModel do Pydantic e métodos gerados.
-var reserved = []string{
-	// Python
-	"and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else",
-	"except", "false", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "none",
-	"nonlocal", "not", "or", "pass", "raise", "return", "true", "try", "while", "with", "yield",
-	// Go
-	"case", "chan", "const", "default", "defer", "fallthrough", "func", "go", "goto", "interface",
-	"map", "package", "range", "select", "struct", "switch", "type", "var",
-	// Pydantic (BaseModel) e métodos gerados
-	"copy", "dict", "json", "schema", "schema_json", "construct", "validate", "fields",
-	"parse_obj", "parse_raw", "parse_file", "from_orm", "update_forward_refs", "metadata", "registry",
-}
-
 // Parse lê os campos na sintaxe "nome:tipo" ou "nome:tipo?". Recusa nomes
-// fora de snake_case, reservados, "id" e repetidos (contando a coluna
-// <nome>_id de ref).
-func Parse(specs []string) ([]Field, error) {
+// fora de snake_case, reservados na linguagem (reserved, aceitando prefixos
+// terminados em "*"), "id" e repetidos (contando a coluna <nome>_id de ref).
+func Parse(specs []string, reserved ...string) ([]Field, error) {
 	var result []Field
 	columns := map[string]string{}
 	for _, spec := range specs {
@@ -61,7 +45,7 @@ func Parse(specs []string) ([]Field, error) {
 		if name == "id" || field.Column() == "id" {
 			return nil, fmt.Errorf("campo %q: id é gerado automaticamente e não pode ser declarado", spec)
 		}
-		if slices.Contains(reserved, name) || strings.HasPrefix(name, "model_") {
+		if isReserved(name, reserved) {
 			return nil, fmt.Errorf("campo %q: %q é uma palavra reservada", spec, name)
 		}
 		if previous, ok := columns[field.Column()]; ok {
@@ -71,6 +55,19 @@ func Parse(specs []string) ([]Field, error) {
 		result = append(result, field)
 	}
 	return result, nil
+}
+
+func isReserved(name string, reserved []string) bool {
+	for _, word := range reserved {
+		if prefix, ok := strings.CutSuffix(word, "*"); ok {
+			if strings.HasPrefix(name, prefix) {
+				return true
+			}
+		} else if name == word {
+			return true
+		}
+	}
+	return false
 }
 
 // String devolve o campo na sintaxe da linha de comando ("image_url:str?").

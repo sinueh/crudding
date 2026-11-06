@@ -21,24 +21,24 @@ var (
 {{- define "go-checks" }}
 {{- range .Fields }}
 {{- if .MaxLen }}
-	if r.{{.GoName}} != nil && len(*r.{{.GoName}}) > {{.MaxLen}} {
+	if r.{{.Name}} != nil && len(*r.{{.Name}}) > {{.MaxLen}} {
 		return errors.New("{{.Column}} deve ter no máximo {{.MaxLen}} caracteres")
 	}
 {{- end }}
 {{- if .IsDate }}
-	if r.{{.GoName}} != nil {
-		if _, err := time.Parse("2006-01-02", *r.{{.GoName}}); err != nil {
+	if r.{{.Name}} != nil {
+		if _, err := time.Parse("2006-01-02", *r.{{.Name}}); err != nil {
 			return errors.New("{{.Column}} deve estar no formato AAAA-MM-DD")
 		}
 	}
 {{- end }}
 {{- if .IsUUID }}
-	if r.{{.GoName}} != nil && (len(*r.{{.GoName}}) != 36 || strings.Count(*r.{{.GoName}}, "-") != 4) {
+	if r.{{.Name}} != nil && (len(*r.{{.Name}}) != 36 || strings.Count(*r.{{.Name}}, "-") != 4) {
 		return errors.New("{{.Column}} deve ser um UUID")
 	}
 {{- end }}
 {{- if .IsRef }}
-	if r.{{.GoName}} != nil && *r.{{.GoName}} == 0 {
+	if r.{{.Name}} != nil && *r.{{.Name}} == 0 {
 		return errors.New("{{.Column}} deve ser maior que zero")
 	}
 {{- end }}
@@ -89,9 +89,9 @@ func (x *{{.Recv}}) insert(item *{{.M}}) error {
 {{- if eq $d.Endpoint.Store "sql" }}
 	if x.db != nil {
 {{- if $d.Endpoint.SQL.Returning }}
-		return x.dbError(x.db.QueryRow({{$d.Endpoint.SQL.Insert}}{{ range $d.Fields }}, item.{{.GoName}}{{ end }}).Scan(&item.ID))
+		return x.dbError(x.db.QueryRow({{$d.Endpoint.SQL.Insert}}{{ range $d.Fields }}, item.{{.Name}}{{ end }}).Scan(&item.ID))
 {{- else }}
-		res, err := x.db.Exec({{$d.Endpoint.SQL.Insert}}{{ range $d.Fields }}, item.{{.GoName}}{{ end }})
+		res, err := x.db.Exec({{$d.Endpoint.SQL.Insert}}{{ range $d.Fields }}, item.{{.Name}}{{ end }})
 		if err != nil {
 			return x.dbError(err)
 		}
@@ -124,7 +124,7 @@ func (x *{{.Recv}}) findAll() ([]{{.M}}, error) {
 		list := make([]{{.M}}, 0)
 		for rows.Next() {
 			var item {{.M}}
-			if err := rows.Scan(&item.ID{{ range $d.Fields }}, &item.{{.GoName}}{{ end }}); err != nil {
+			if err := rows.Scan(&item.ID{{ range $d.Fields }}, &item.{{.Name}}{{ end }}); err != nil {
 				return nil, err
 			}
 			list = append(list, item)
@@ -146,7 +146,7 @@ func (x *{{.Recv}}) find(id uint) (*{{.M}}, error) {
 {{- if eq $d.Endpoint.Store "sql" }}
 	if x.db != nil {
 		var item {{.M}}
-		err := x.db.QueryRow({{$d.Endpoint.SQL.SelectOne}}, id).Scan(&item.ID{{ range $d.Fields }}, &item.{{.GoName}}{{ end }})
+		err := x.db.QueryRow({{$d.Endpoint.SQL.SelectOne}}, id).Scan(&item.ID{{ range $d.Fields }}, &item.{{.Name}}{{ end }})
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, {{.NotFound}}
 		}
@@ -168,7 +168,7 @@ func (x *{{.Recv}}) find(id uint) (*{{.M}}, error) {
 func (x *{{.Recv}}) save(item *{{.M}}) error {
 {{- if eq $d.Endpoint.Store "sql" }}
 	if x.db != nil {
-		if _, err := x.db.Exec({{$d.Endpoint.SQL.Update}}{{ range $d.Fields }}, item.{{.GoName}}{{ end }}, item.ID); err != nil {
+		if _, err := x.db.Exec({{$d.Endpoint.SQL.Update}}{{ range $d.Fields }}, item.{{.Name}}{{ end }}, item.ID); err != nil {
 			return x.dbError(err)
 		}
 		return nil
@@ -222,8 +222,8 @@ func (x *{{.Recv}}) remove(id uint) error {
 {{- define "go-apply" }}
 {{- $item := .Item }}
 {{- range .D.Fields }}
-	if req.{{.GoName}} != nil {
-		{{$item}}.{{.GoName}} = {{ if .Nullable }}req.{{.GoName}}{{ else }}*req.{{.GoName}}{{ end }}
+	if req.{{.Name}} != nil {
+		{{$item}}.{{.Name}} = {{ if .Nullable }}req.{{.Name}}{{ else }}*req.{{.Name}}{{ end }}
 	}
 {{- end }}
 {{- end -}}

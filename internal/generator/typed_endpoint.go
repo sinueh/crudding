@@ -1,13 +1,10 @@
 package generator
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go/format"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"slices"
@@ -33,8 +30,8 @@ import (
 // protegido dessa troca.
 //
 // Além disso, templates/langs/<lang>/fields/fields.crud.tmpl lista arquivos
-// extras (testes), pacotes Python e linhas para requirements/go.mod, e um
-// banco SQL configurado (postgres/mysql) ganha a migração
+// extras (testes), pacotes e linhas para arquivos de dependências, e um banco
+// SQL configurado (postgres/mysql) ganha a migração
 // migrations/NNNNNN_create_<nome>.up.sql/.down.sql.
 
 // fieldsDir é a pasta dos templates de campos tipados dentro de templates/langs/<lang>.
@@ -55,6 +52,7 @@ type fieldsRecipe struct {
 type typedEndpoint struct {
 	root    string
 	m       manifest.Manifest
+	lang    TypedLanguage
 	name    string
 	fields  []fields.Field
 	langFS  fs.FS
@@ -82,7 +80,11 @@ func AddTypedEndpoint(root string, m manifest.Manifest, name string, specs []str
 	if err := CheckEndpointSupport(m); err != nil {
 		return common.Result{}, nil, err
 	}
-	list, err := fields.Parse(specs)
+	var reserved []string
+	if lang, ok := TypedLanguageFor(m.Language); ok {
+		reserved = lang.Reserved()
+	}
+	list, err := fields.Parse(specs, reserved...)
 	if err != nil {
 		return common.Result{}, nil, err
 	}
@@ -127,7 +129,11 @@ func typedEndpointExtras(root string, m manifest.Manifest, name string, template
 	if len(specs) == 0 || templates == nil {
 		return nil, nil
 	}
-	list, err := fields.Parse(specs)
+	var reserved []string
+	if lang, ok := TypedLanguageFor(m.Language); ok {
+		reserved = lang.Reserved()
+	}
+	list, err := fields.Parse(specs, reserved...)
 	if err != nil {
 		return nil, fmt.Errorf("endpoint_fields.%s do %s: %w", name, manifest.FileName, err)
 	}
@@ -149,6 +155,10 @@ func newTypedEndpoint(root string, m manifest.Manifest, name string, list []fiel
 	}
 	if m.Architecture == manifest.CustomArchitecture || m.Language == "" {
 		return nil, unsupported("projeto com arquitetura custom")
+	}
+	lang, ok := TypedLanguageFor(m.Language)
+	if !ok {
+		return nil, unsupported("linguagem sem suporte a campos tipados")
 	}
 	langFS, err := fs.Sub(templates, path.Join("templates", "langs", m.Language))
 	if err != nil {
@@ -178,11 +188,8 @@ func newTypedEndpoint(root string, m manifest.Manifest, name string, list []fiel
 	for key, value := range archManifest.Vars {
 		data[key] = value
 	}
-	if module := goModule(root); module != "" {
-		data["GoModule"] = module
-	}
 
-	typed := &typedEndpoint{root: root, m: m, name: name, fields: list, langFS: langFS, sources: sources, data: data, rename: rename}
+	typed := &typedEndpoint{root: root, m: m, lang: lang, name: name, fields: list, langFS: langFS, sources: sources, data: data, rename: rename}
 	typed.addFieldData()
 
 	recipeContent, err := typed.render(path.Join(fieldsDir, "fields.crud.tmpl"))
@@ -212,23 +219,6 @@ func renderArchitecture(langFS fs.FS, architecture string, data map[string]any) 
 		return manifest.Manifest{}, fmt.Errorf("renderizar %s: %w", manifestPath, err)
 	}
 	return manifest.Parse(rendered.Bytes(), manifestPath)
-}
-
-// goModule lê o nome do módulo no go.mod do projeto, que pode ter mudado
-// desde a geração.
-func goModule(root string) string {
-	file, err := os.Open(filepath.Join(root, "go.mod"))
-	if err != nil {
-		return ""
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if module, ok := strings.CutPrefix(strings.TrimSpace(scanner.Text()), "module "); ok {
-			return strings.TrimSpace(module)
-		}
-	}
-	return ""
 }
 
 func (t *typedEndpoint) patch() (common.Patch, error) {
@@ -295,7 +285,8 @@ func (t *typedEndpoint) stack() string {
 	return t.m.Language + " + " + t.m.Framework + " + " + t.m.Architecture
 }
 
-// renderTyped renderiza fields/<from> e aplica a troca de nomes do exemplo.
+// renderTyped renderiza fields/<from>, aplica a troca de nomes do exemplo e
+// formata o código pela linguagem ativa.
 func (t *typedEndpoint) renderTyped(from string) ([]byte, error) {
 	typedPath := path.Join(fieldsDir, from)
 	if _, err := fs.Stat(t.langFS, typedPath); err != nil {
@@ -306,14 +297,7 @@ func (t *typedEndpoint) renderTyped(from string) ([]byte, error) {
 		return nil, err
 	}
 	output := []byte(renameUnprotected(string(content), t.rename))
-	if strings.HasSuffix(from, ".go.tmpl") {
-		// Alinha structs e imports como o gofmt; se não formatar, o código
-		// fica como saiu do template para o erro aparecer no go build.
-		if formatted, err := format.Source(output); err == nil {
-			output = formatted
-		}
-	}
-	return output, nil
+	return t.lang.Format(from, output), nil
 }
 
 // render executa um template de templates/langs/<lang> com os partials de
@@ -326,6 +310,7 @@ func (t *typedEndpoint) render(file string) ([]byte, error) {
 	files := slices.DeleteFunc(partials, func(partial string) bool { return partial == file })
 	var parsed *template.Template
 	funcs := template.FuncMap{
+		"str": func(text string) string { return protect(t.lang.StringLiteral(text)) },
 		// include devolve a saída de um {{define}} como texto, para usar em expressões.
 		"include": func(name string, data any) (string, error) {
 			var output bytes.Buffer
@@ -378,8 +363,6 @@ func renameUnprotected(text string, rename func(string) string) string {
 var typedFuncs = template.FuncMap{
 	// protect marca um texto calculado no template para não passar pela troca de nomes.
 	"protect": protect,
-	"pyStr":   func(text string) string { return protect(pythonString(text)) },
-	"goStr":   func(text string) string { return protect(goString(text)) },
 	// dict monta um mapa para passar vários valores a um {{template}}.
 	"dict": func(pairs ...any) (map[string]any, error) {
 		if len(pairs)%2 != 0 {
@@ -395,18 +378,4 @@ var typedFuncs = template.FuncMap{
 		}
 		return values, nil
 	},
-}
-
-// pythonString devolve text como literal de string Python entre aspas simples.
-func pythonString(text string) string {
-	return "'" + strings.NewReplacer(`\`, `\\`, `'`, `\'`, "\n", `\n`).Replace(text) + "'"
-}
-
-// goString devolve text como literal de string Go: entre crases quando possível.
-func goString(text string) string {
-	if !strings.Contains(text, "`") {
-		return "`" + text + "`"
-	}
-	encoded, _ := json.Marshal(text)
-	return string(encoded)
 }

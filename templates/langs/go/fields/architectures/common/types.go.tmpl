@@ -1,7 +1,7 @@
 package {{if eq .Architecture "modular"}}{{.Package}}{{else if or (eq .Architecture "hexagonal") (eq .Architecture "clean_arch")}}domain{{else if eq .Architecture "flat"}}main{{else}}types{{end}}
 
 import (
-{{- range .Endpoint.GoTypesImports }}
+{{- range .Endpoint.TypesImports }}
 	"{{.}}"
 {{- end }}
 )
@@ -12,13 +12,13 @@ import (
 // Create{{.Class}}Request é o corpo do POST: campos obrigatórios não podem faltar.
 type Create{{.Class}}Request struct {
 {{- range .Fields }}
-	{{.GoName}} *{{.GoType}} {{.GoTag}}
+	{{.InDecl}}
 {{- end }}
 }
 
 func (r Create{{.Class}}Request) Validate() error {
 {{- range .Fields }}{{ if .Required }}
-	if r.{{.GoName}} == nil {
+	if r.{{.Name}} == nil {
 		return errors.New("{{.Column}} é obrigatório")
 	}
 {{- end }}{{ end }}
@@ -29,7 +29,7 @@ func (r Create{{.Class}}Request) Validate() error {
 // Update{{.Class}}Request é o corpo do PATCH: só os campos enviados mudam.
 type Update{{.Class}}Request struct {
 {{- range .Fields }}
-	{{.GoName}} *{{.GoType}} {{.GoTag}}
+	{{.PatchDecl}}
 {{- end }}
 }
 
@@ -41,6 +41,6 @@ func (r Update{{.Class}}Request) Validate() error {
 type {{.Class}}Response struct {
 	ID uint `json:"id"`
 {{- range .Fields }}
-	{{.GoName}} {{.GoModelType}} {{.GoTag}}
+	{{.OutDecl}}
 {{- end }}
 }

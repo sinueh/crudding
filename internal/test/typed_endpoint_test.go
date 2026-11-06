@@ -37,6 +37,9 @@ func TestParseFields(t *testing.T) {
 		t.Errorf("Refs() = %v", refs)
 	}
 
+	pyLang, _ := generator.TypedLanguageFor("python")
+	goLang, _ := generator.TypedLanguageFor("go")
+	allReserved := slices.Concat(pyLang.Reserved(), goLang.Reserved())
 	for spec, want := range map[string]string{
 		"name":           "nome:tipo",
 		"name:":          "nome:tipo",
@@ -49,9 +52,16 @@ func TestParseFields(t *testing.T) {
 		"model_x:str":    "palavra reservada",
 		"validate:str":   "palavra reservada",
 	} {
-		if _, err := fields.Parse([]string{spec}); err == nil || !strings.Contains(err.Error(), want) {
+		if _, err := fields.Parse([]string{spec}, allReserved...); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("Parse(%q) err = %v, want contendo %q", spec, err, want)
 		}
+	}
+	// Palavras reservadas são separadas por linguagem: class e model_x só são barrados em Python; type e chan, só em Go.
+	if _, err := fields.Parse([]string{"class:str", "model_x:str"}, goLang.Reserved()...); err != nil {
+		t.Errorf("Go recusou palavra reservada de Python: %v", err)
+	}
+	if _, err := fields.Parse([]string{"type:str", "chan:str"}, pyLang.Reserved()...); err != nil {
+		t.Errorf("Python recusou palavra reservada de Go: %v", err)
 	}
 	for _, specs := range [][]string{{"name:str", "name:text"}, {"cart:ref", "cart_id:int"}} {
 		if _, err := fields.Parse(specs); err == nil || !strings.Contains(err.Error(), "já é usada") {
@@ -101,16 +111,22 @@ func TestMigrationSQL(t *testing.T) {
 		t.Errorf("DropTable() = %q", got)
 	}
 
-	goQueries := fields.GoQueries(fields.Postgres, "product", product)
+	goLang, _ := generator.TypedLanguageFor("go")
+	goQueries := fields.BuildQueries(fields.Postgres, "product", product, func(index int) string {
+		return goLang.Placeholder(fields.Postgres, index)
+	}, true)
 	if !strings.Contains(goQueries.Insert, "VALUES ($1, $2, $3, $4, $5) RETURNING \"id\"") || !strings.Contains(goQueries.Update, `WHERE "id" = $6`) {
-		t.Errorf("GoQueries(postgres) = %+v", goQueries)
+		t.Errorf("BuildQueries(go, postgres) = %+v", goQueries)
 	}
 	if !strings.Contains(goQueries.Select, `to_char("released", 'YYYY-MM-DD')`) {
-		t.Errorf("GoQueries(postgres).Select = %s", goQueries.Select)
+		t.Errorf("BuildQueries(go, postgres).Select = %s", goQueries.Select)
 	}
-	pyQueries := fields.PythonQueries(fields.MySQL, "product", product)
+	pyLang, _ := generator.TypedLanguageFor("python")
+	pyQueries := fields.BuildQueries(fields.MySQL, "product", product, func(index int) string {
+		return pyLang.Placeholder(fields.MySQL, index)
+	}, false)
 	if pyQueries.Returning || !strings.Contains(pyQueries.Insert, "VALUES (%s, %s, %s, %s, %s)") {
-		t.Errorf("PythonQueries(mysql) = %+v", pyQueries)
+		t.Errorf("BuildQueries(python, mysql) = %+v", pyQueries)
 	}
 }
 
@@ -312,6 +328,17 @@ func TestTypedEndpointRejections(t *testing.T) {
 	custom.TemplateEndpoint.Files = []string{"src/app/template/service.py"}
 	if _, _, err := generator.AddTypedEndpoint(pythonRoot, custom, "product", []string{"name:str"}, templates); err == nil || !strings.Contains(err.Error(), "não são suportados") {
 		t.Errorf("AddTypedEndpoint com exemplo customizado: err = %v", err)
+	}
+
+	// Uma linguagem sem implementação de TypedLanguage falha de forma explícita.
+	unknownDir := t.TempDir()
+	unknownLang := pythonManifest
+	unknownLang.Language = "java"
+	if err := manifest.Write(unknownDir, unknownLang); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := generator.AddTypedEndpoint(unknownDir, unknownLang, "product", []string{"name:str"}, templates); err == nil || !strings.Contains(err.Error(), "linguagem sem suporte a campos tipados") {
+		t.Errorf("AddTypedEndpoint com linguagem sem TypedLanguage: err = %v", err)
 	}
 }
 

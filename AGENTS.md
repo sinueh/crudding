@@ -67,6 +67,9 @@ crudding/
 │   │   │   ├── init.go          # Init: grava/atualiza directories e files no project.crud
 │   │   │   ├── endpoint.go      # add/remove endpoint a partir do campo "template_endpoint" (endpoint de exemplo)
 │   │   │   └── template.go      # Plan de "crudding template": cópia com troca de nome; Unlisted
+│   │   ├── fields/
+│   │   │   ├── fields.go        # Leitura e validação agnóstica dos campos tipados (nome:tipo[?])
+│   │   │   └── sql.go           # DDL (CreateTable/DropTable) e BuildQueries SQL por dialeto
 │   │   ├── langs/
 │   │   │   ├── golang/
 │   │   │   │   └── generate.go  # Opções Go (frameworks, arquiteturas, ORMs)
@@ -76,6 +79,10 @@ crudding/
 │   │   ├── database.go          # Dispatcher de "crudding add db"
 │   │   ├── generator.go         # Dispatcher central do gerador (motor orientado a manifests)
 │   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint" e "crudding remove endpoint"
+│   │   ├── typed_endpoint.go    # Motor agnóstico de geração de endpoints com campos tipados
+│   │   ├── typed_views.go       # Interface TypedLanguage, registro de linguagens e views genéricas (fieldView/endpointView)
+│   │   ├── typed_python.go      # Implementação de TypedLanguage para Python
+│   │   └── typed_go.go          # Implementação de TypedLanguage para Go
 │   ├── manifest/
 │   │   └── manifest.go          # Leitura/escrita do project.crud (JSON) e busca nos diretórios pais
 │   ├── project/
@@ -180,7 +187,7 @@ Como o template vem de fora do binário, todo caminho passa por `checkPaths` (`f
 
 ### Campos tipados (`crudding add endpoint <nome> campo:tipo...`)
 
-Só Python e Go (Node não tem). `generator.AddTypedEndpoint` (`internal/generator/typed_endpoint.go`) usa o mesmo `custom.EndpointPatch` (caminhos das cópias e linhas de `register`), mas troca o conteúdo de cada arquivo: renderiza `templates/langs/<lang>/fields/<from>`, onde `<from>` é o template que gerou o arquivo do exemplo no `architectures/<arch>/project.crud.tmpl`, e aplica a mesma troca de nomes (`custom.EndpointRenamer`). Textos vindos dos campos são protegidos dessa troca (`protect`). `fields/fields.crud.tmpl` lista os extras (teste, pacotes, linhas de `requirements.txt`) e `fields/partials/` tem os `{{define}}` comuns. A sintaxe, os tipos e o SQL (DDL e queries por dialeto) ficam em `internal/generator/fields`. Os campos vão para `endpoint_fields` no `project.crud`; o `remove endpoint` (`RemoveTypedEndpoint`) apaga também o teste e mantém as migrações. Para suportar uma combinação nova, crie o template tipado correspondente: sem ele o comando falha com "campos tipados não são suportados".
+`generator.AddTypedEndpoint` (`internal/generator/typed_endpoint.go`) usa o mesmo `custom.EndpointPatch` (caminhos das cópias e linhas de `register`), mas troca o conteúdo de cada arquivo: renderiza `templates/langs/<lang>/fields/<from>`, onde `<from>` é o template que gerou o arquivo do exemplo no `architectures/<arch>/project.crud.tmpl`, e aplica a mesma troca de nomes (`custom.EndpointRenamer`). Textos vindos dos campos são protegidos dessa troca (`protect`). `fields/fields.crud.tmpl` lista os extras (teste, pacotes, linhas de dependências) e `fields/partials/` tem os `{{define}}` comuns. A sintaxe, os tipos e o SQL (DDL e `BuildQueries` por dialeto) ficam em `internal/generator/fields`. Cada linguagem suportada implementa a interface `TypedLanguage` (`internal/generator/typed_views.go`, registrada em `typedLanguages`: `typed_python.go` e `typed_go.go`), preenchendo os campos genéricos de `fieldView` (`.Name`, `.Type`, `.ModelType`, `.Tag`, `.Decl`, `.InDecl`, `.PatchDecl`, `.OutDecl`) e `endpointView` (`.ModelImports`, `.TypesImports`, `.SamplePayload`, `.UpdatePayload`, `.SQL`). Os campos vão para `endpoint_fields` no `project.crud`; o `remove endpoint` (`RemoveTypedEndpoint`) apaga também o teste e mantém as migrações. Para suportar uma linguagem nova, adicione 1 arquivo implementando `TypedLanguage` e a pasta `templates/langs/<lang>/fields/`.
 
 ---
 
