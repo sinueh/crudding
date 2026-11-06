@@ -214,12 +214,44 @@ func TestAddEndpointRejections(t *testing.T) {
 		want string
 	}{
 		{pythonRoot, pythonManifest, "nonexistent", "não encontrado"},
-		{pythonRoot, pythonManifest, "template", "endpoint de exemplo"},
 		{nodeRoot, nodeManifest, "invoice", `campo "template_endpoint"`},
 	} {
 		if _, err := generator.RemoveEndpoint(testCase.root, testCase.m, testCase.name); err == nil || !strings.Contains(err.Error(), testCase.want) {
 			t.Errorf("RemoveEndpoint(%s, %s) err = %v, want contendo %q", testCase.m.Language, testCase.name, err, testCase.want)
 		}
+	}
+}
+
+func TestRemoveTemplateEndpointKeepsMoldAndAllowsNewEndpoints(t *testing.T) {
+	root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "python", Framework: "fastapi", Architecture: "modular"})
+	if _, err := generator.RemoveEndpoint(root, m, "template"); err != nil {
+		t.Fatalf("RemoveEndpoint(template) error = %v", err)
+	}
+	assertFilesAbsent(t, root, "src/app/template/controller.py", "src/app/template")
+	assertFilesExist(t, root, ".crudding/template/src/app/controller.py", ".crudding/template/src/app/service.py")
+	m = assertStructureInSync(t, root)
+	if len(m.Endpoints) != 0 {
+		t.Fatalf("Endpoints após remover template = %v, want []", m.Endpoints)
+	}
+
+	// Mesmo sem nenhum endpoint ativo no projeto, adicionar e remover novos endpoints continua funcionando.
+	for _, name := range []string{"store", "product"} {
+		if _, err := generator.AddEndpoint(root, m, name); err != nil {
+			t.Fatalf("AddEndpoint(%s) após remover template error = %v", name, err)
+		}
+		assertFileContains(t, root, "src/app/main.py", name+"_router")
+	}
+	checkPythonSyntax(t, root)
+	m = assertStructureInSync(t, root)
+	if !slices.Equal(m.Endpoints, []string{"store", "product"}) {
+		t.Fatalf("Endpoints = %v, want [store product]", m.Endpoints)
+	}
+	if _, err := generator.RemoveEndpoint(root, m, "store"); err != nil {
+		t.Fatalf("RemoveEndpoint(store) error = %v", err)
+	}
+	m = assertStructureInSync(t, root)
+	if !slices.Equal(m.Endpoints, []string{"product"}) {
+		t.Fatalf("Endpoints = %v, want [product]", m.Endpoints)
 	}
 }
 
