@@ -3,6 +3,8 @@ package test
 import (
 	"archive/zip"
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
@@ -1064,5 +1066,81 @@ func createRawZip(t *testing.T, dest string, files map[string]string) {
 	}
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCLIAddSkill(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	// Help flags
+	for _, helpArg := range []string{"-h", "--help", "help"} {
+		var stdout, stderr bytes.Buffer
+		if code := cli.Run([]string{"add", "skill", helpArg}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(add skill %s) = %d, stderr = %q", helpArg, code, stderr.String())
+		}
+		if !strings.Contains(stdout.String(), "crudding add skill") || !strings.Contains(stdout.String(), ".agents/skills/crudding/SKILL.md") {
+			t.Fatalf("Run(add skill %s) stdout = %q", helpArg, stdout.String())
+		}
+	}
+
+	// Argumentos extras devem falhar
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"add", "skill", "extra"}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "argumentos inesperados") {
+		t.Fatalf("Run(add skill extra) = %d, stderr = %q", code, stderr.String())
+	}
+
+	// Instalação inicial e sobrescrita a partir do AGENTS.md remoto simulado
+	payload := "---\nname: crudding\n---\n# AGENTS.md\nInstruções v1\n"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	t.Setenv("CRUDDING_SKILL_URL", srv.URL)
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"add", "skill"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add skill) = %d, stderr = %q", code, stderr.String())
+	}
+	skillFile := filepath.Join(tmp, ".agents", "skills", "crudding", "SKILL.md")
+	got, err := os.ReadFile(skillFile)
+	if err != nil {
+		t.Fatalf("ler %s: %v", skillFile, err)
+	}
+	if string(got) != payload {
+		t.Fatalf("conteúdo de SKILL.md = %q, want %q", string(got), payload)
+	}
+	if !strings.Contains(stdout.String(), skillFile) {
+		t.Fatalf("stdout = %q, want contendo %q", stdout.String(), skillFile)
+	}
+
+	// Segunda execução deve sobrescrever o SKILL.md existente
+	payload = "---\nname: crudding\n---\n# AGENTS.md\nInstruções v2 atualizadas\n"
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"add", "skill"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add skill overwrite) = %d, stderr = %q", code, stderr.String())
+	}
+	got, err = os.ReadFile(skillFile)
+	if err != nil {
+		t.Fatalf("ler %s após sobrescrita: %v", skillFile, err)
+	}
+	if string(got) != payload {
+		t.Fatalf("conteúdo de SKILL.md após sobrescrita = %q, want %q", string(got), payload)
+	}
+
+	// Erro HTTP (status != 200)
+	errSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer errSrv.Close()
+	t.Setenv("CRUDDING_SKILL_URL", errSrv.URL)
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"add", "skill"}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "status HTTP 404") {
+		t.Fatalf("Run(add skill 404) = %d, stderr = %q", code, stderr.String())
 	}
 }

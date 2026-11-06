@@ -1,6 +1,120 @@
+---
+name: crudding
+description: >-
+  Use this skill when scaffolding projects, adding or removing CRUD endpoints,
+  adding database infrastructure, inspecting architectures, or managing custom
+  project templates (.crud / .zip) with the crudding CLI, or when developing and
+  extending the crudding codebase itself.
+---
+
 # AGENTS.md
 
-Guia de contexto, arquitetura e instruções para agentes de IA atuando no repositório **crudding**.
+Guia completo de instruções para agentes de IA sobre **como utilizar a CLI `crudding`** em projetos e sobre a arquitetura interna do repositório **crudding**.
+
+> **Importante para Agentes de IA:** Sempre passe argumentos e flags explícitos (`crudding new ...`, `crudding add endpoint <name>`, `crudding add db <db>`) em vez de rodar comandos interativos (TUI) sem argumentos.
+
+---
+
+## Guia de Uso da CLI `crudding` (Para Agentes de IA)
+
+### 1. Criando um Novo Projeto (`crudding new`)
+
+Gere um projeto de forma não-interativa passando pares `chave:valor` (ou `-flag valor`):
+
+```sh
+crudding new n:<nome> l:<lang> [r:<runtime>] f:<framework> a:<arch> [d:<db>] [o:<orm>]
+```
+
+#### Stacks Suportadas (`crudding stacks`)
+
+| Linguagem (`l:`) | Runtimes (`r:`) | Frameworks (`f:`) | Arquiteturas (`a:`) | ORMs (`o:`) | Bancos de Dados (`d:`) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `go` | *(nenhum)* | `raw`, `gin`, `fiber`, `chi` | `flat`, `layered`, `modular`, `hexagonal`, `clean_arch` | `none`, `gorm` | `none`, `postgres`, `mysql`, `mongo` |
+| `python` | *(nenhum)* | `raw`, `fastapi`, `django`, `flask` | `flat`, `layered`, `modular`, `hexagonal`, `clean_arch` | `none`, `sqlalchemy` | `none`, `postgres`, `mysql`, `mongo` |
+| `node` | `js`, `ts` | `raw`, `express`, `fastify`, `nest` | `flat`, `layered`, `modular`, `hexagonal`, `clean_arch` | `none`, `prisma`, `typeorm` | `none`, `postgres`, `mysql`, `mongo` |
+
+**Exemplos:**
+```sh
+# Go + Gin + Hexagonal + Postgres + GORM
+crudding new n:minha-api l:go f:gin a:hexagonal d:postgres o:gorm
+
+# Python + FastAPI + Clean Architecture
+crudding new n:core-service l:python f:fastapi a:clean_arch
+
+# Node (TypeScript) + Fastify + Modular
+crudding new n:TsApi l:node r:ts f:fastify a:modular
+```
+
+### 2. Gerenciando Endpoints CRUD (`add endpoint` / `remove endpoint`)
+
+Execute dentro do diretório do projeto (onde existe o arquivo `project.crud`):
+
+```sh
+# Adicionar um novo endpoint CRUD (snake_case)
+crudding add endpoint <nome>
+
+# Remover um endpoint CRUD existente
+crudding remove endpoint <nome>
+```
+
+- **Como funciona:** Copia o endpoint de exemplo definido em `"template_endpoint"` no `project.crud` (`name`, `files`, `register`), substituindo identificadores em `snake_case`, `kebab-case`, `camelCase` e `PascalCase`, e duplica/remove as linhas de registro (rotas, imports, injeção de dependência) nos arquivos de `register`.
+- **Restrições:**
+  - O próprio endpoint de exemplo (ex.: `user` em Go, `resource` em Python) não pode ser removido nem readicionado.
+  - Palavras reservadas da linguagem são recusadas.
+
+### 3. Adicionando Infraestrutura de Banco de Dados (`add db`)
+
+Execute dentro de um projeto gerado (`go`, `python` ou `node`, com arquitetura diferente de `custom`):
+
+```sh
+crudding add db <postgres|mysql|mongo>
+```
+
+- Cria ou atualiza `docker-compose.yml`, `.env.example` e a pasta `migrations/`.
+- Injeta a configuração e conexão em `config/config.go` (Go), `config/config.py` (Python) ou `src/database.{js,ts}` (Node), e atualiza `go.mod`, `requirements.txt` ou `package.json`.
+
+### 4. Inspecionando o Projeto (`info` / `info draw`)
+
+```sh
+# Exibe nome do projeto, stack e endpoints registrados no project.crud
+crudding info
+
+# Desenha em ASCII a arquitetura do projeto atual (ou de qualquer stack informada)
+crudding info draw
+crudding info draw a:hexagonal l:go
+```
+
+### 5. Templates Customizados (`init`, `add template`, `template`)
+
+Qualquer diretório de projeto pode ser transformado em um template reutilizável salvo em `~/.crudding/templates/` (ou `$CRUDDING_TEMPLATES_DIR`):
+
+```sh
+# 1. (Opcional) Inicializar ou atualizar o project.crud no diretório atual
+crudding init
+
+# 2. Salvar um diretório de projeto como template nomeado
+crudding add template ./meu-projeto meu-template
+
+# 3. Listar templates salvos
+crudding template list
+
+# 4. Gerar um novo projeto a partir de um template salvo
+crudding template use meu-template novo-projeto
+
+# 5. Exportar um template salvo para arquivo .zip
+crudding template export meu-template [destino]
+
+# 6. Importar um arquivo .zip de template diretamente para ~/.crudding/templates/
+crudding template import ./meu-template.zip
+```
+
+### 6. Instalando ou Atualizando a Skill do `crudding` (`add skill`)
+
+Baixa o `AGENTS.md` oficial da raiz do repositório no GitHub e grava em `.agents/skills/crudding/SKILL.md` no diretório atual:
+
+```sh
+crudding add skill
+```
 
 ---
 
@@ -50,6 +164,7 @@ crudding/
 │   │   ├── new.go               # Comando padrão de criação de projeto (runNew)
 │   │   ├── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
 │   │   ├── add_db.go            # Comando "crudding add db" (runAddDB)
+│   │   ├── add_skill.go         # Comando "crudding add skill" (runAddSkill)
 │   │   ├── init.go              # Comando "crudding init" (runInit)
 │   │   ├── add_template.go      # Comando "crudding add template" (runAddTemplate)
 │   │   ├── template.go          # Comandos "crudding template list|use|export|import" (runTemplate)
@@ -205,8 +320,13 @@ go run /caminho/do/crudding/cmd/crudding template use meu-template meu-app
 # Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
 go run /caminho/do/crudding/cmd/crudding add endpoint
 
+# Instalar a skill do crudding no diretório atual
+go run /caminho/do/crudding/cmd/crudding add skill
+
 # Executar verificações e testes unitários
 go vet ./...
+
+# Executar testes unitários
 go test ./...
 
 # Gerar todas as combinações de linguagem/framework/arquitetura em ./generated

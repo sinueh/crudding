@@ -96,6 +96,11 @@ var commands = []Command{
 		Run:     runAddDB,
 	},
 	{
+		Args:    "add skill",
+		Summary: "instala a skill do crudding em .agents/skills/crudding/SKILL.md baixando o AGENTS.md remoto",
+		Run:     runAddSkill,
+	},
+	{
 		Args:    "remove endpoint",
 		Summary: "remove um endpoint CRUD do projeto atual (lê o project.crud)",
 		Run:     runRemoveEndpoint,
