@@ -1,0 +1,33 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
+const JWT_SECRET = process.env.JWT_SECRET || "default-insecure-jwt-secret-minimum-32-bytes";
+const ACCESS_TOKEN_EXPIRE_SECONDS = 900;
+
+export const hashPassword = async (password) => {
+  return bcrypt.hash(password, 12);
+};
+
+export const verifyPassword = async (password, hash) => {
+  return bcrypt.compare(password, hash);
+};
+
+export const generateAccessToken = (userId, email, role) => {
+  const token = jwt.sign({ userId, email, role }, JWT_SECRET, {
+    expiresIn: ACCESS_TOKEN_EXPIRE_SECONDS,
+  });
+  return { token, expiresIn: ACCESS_TOKEN_EXPIRE_SECONDS };
+};
+
+export const decodeAccessToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+};
+
+export const generateRefreshToken = () => {
+  return crypto.randomBytes(32).toString("hex");
+};

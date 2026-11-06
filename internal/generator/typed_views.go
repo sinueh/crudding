@@ -79,6 +79,8 @@ type endpointView struct {
 	RequiredColumns string   // colunas obrigatórias entre aspas ("a", "b")
 	SamplePayload   string   // corpo de criação no teste (literal da linguagem)
 	UpdatePayload   string   // corpo de alteração no teste (literal da linguagem)
+	OwnerAware      bool     // se filtra por proprietário (user_id)
+	OwnerColumn     string   // coluna do proprietário (ex.: "user_id")
 }
 
 // samples são valores de exemplo em JSON: o primeiro para criar, o segundo para alterar.
@@ -93,7 +95,9 @@ var samples = map[string][2]string{
 func newFieldView(lang TypedLanguage, field fields.Field) fieldView {
 	sample := samples[field.Type]
 	create, update := sample[0], sample[1]
-	if strings.Contains(create, "%s") {
+	if field.Type == "ref" && (field.Ref() == "user" || field.Ref() == "users") {
+		create, update = `"123e4567-e89b-12d3-a456-426614174000"`, `"123e4567-e89b-12d3-a456-426614174000"`
+	} else if strings.Contains(create, "%s") {
 		create, update = fmt.Sprintf(create, field.Name), fmt.Sprintf(update, field.Name)
 	}
 	view := fieldView{
@@ -151,9 +155,15 @@ func (t *typedEndpoint) addFieldData() {
 		view.Store = "sql"
 		view.Dialect = string(dialect)
 		dateAsText := t.lang.Type(fields.Field{Type: "date"}) == t.lang.Type(fields.Field{Type: "str"})
-		queries := fields.BuildQueries(dialect, t.name, t.fields, func(index int) string {
+		ownerCol := ""
+		if t.opts.Owner || t.m.IsOwnerEndpoint(t.name) {
+			ownerCol = "user_id"
+			view.OwnerAware = true
+			view.OwnerColumn = "user_id"
+		}
+		queries := fields.BuildQueriesWithOptions(dialect, t.name, t.fields, func(index int) string {
 			return t.lang.Placeholder(dialect, index)
-		}, dateAsText)
+		}, dateAsText, ownerCol)
 		quote := func(sql string) string { return protect(t.lang.StringLiteral(sql)) }
 		view.SQL = fields.Queries{
 			Select:    quote(queries.Select),

@@ -1,0 +1,119 @@
+package security
+
+import (
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrInvalidToken = errors.New("token inválido ou expirado")
+	ErrTokenExpired = errors.New("token expirado")
+)
+
+type Claims struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+type TokenService struct {
+	secret        []byte
+	accessExpiry  time.Duration
+	refreshExpiry time.Duration
+}
+
+func NewTokenService() *TokenService {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "default-insecure-jwt-secret-minimum-32-bytes"
+	}
+	accessExp := 15 * time.Minute
+	if expStr := os.Getenv("JWT_EXPIRATION"); expStr != "" {
+		if d, err := time.ParseDuration(expStr); err == nil {
+			accessExp = d
+		}
+	}
+	refreshExp := 7 * 24 * time.Hour
+	if expStr := os.Getenv("REFRESH_TOKEN_EXPIRATION"); expStr != "" {
+		if d, err := time.ParseDuration(expStr); err == nil {
+			refreshExp = d
+		}
+	}
+	return &TokenService{
+		secret:        []byte(secret),
+		accessExpiry:  accessExp,
+		refreshExpiry: refreshExp,
+	}
+}
+
+func (s *TokenService) GenerateAccessToken(userID, email, role string) (string, int64, error) {
+	now := time.Now()
+	expiresAt := now.Add(s.accessExpiry)
+	claims := Claims{
+		UserID: userID,
+		Email:  email,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(s.secret)
+	if err != nil {
+		return "", 0, err
+	}
+	return tokenString, int64(s.accessExpiry.Seconds()), nil
+}
+
+func (s *TokenService) GenerateRefreshToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func (s *TokenService) ValidateToken(tokenStr string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("método de assinatura inesperado: %v", token.Header["alg"])
+		}
+		return s.secret, nil
+	})
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func ConstantTimeCompare(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}

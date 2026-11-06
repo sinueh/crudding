@@ -1,0 +1,9 @@
+// Schemas de validação em JavaScript
+export const validateRegister = (body) => {
+  if (!body.email || !body.email.includes("@")) throw new Error("Email inválido");
+  if (!body.password || body.password.length < 8) throw new Error("Senha deve conter ao menos 8 caracteres");
+};
+
+export const validateLogin = (body) => {
+  if (!body.email || !body.password) throw new Error("Email e senha obrigatórios");
+};

@@ -1,0 +1,38 @@
+from typing import List
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from {{replace .AuthDir "/" "."}}.security.security import decode_access_token
+
+security_scheme = HTTPBearer(auto_error=False)
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+) -> dict:
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cabeçalho de autorização ausente ou inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_access_token(credentials.credentials)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return payload
+
+
+def require_roles(allowed_roles: List[str]):
+    def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
+        user_role = current_user.get("role")
+        if user_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso negado: permissões insuficientes",
+            )
+        return current_user
+
+    return role_checker

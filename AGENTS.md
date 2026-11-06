@@ -64,9 +64,23 @@ crudding remove endpoint <nome>
 crudding remove endpoint template && \
   crudding add endpoint store name:str && \
   crudding add endpoint product store:ref name:str price:decimal image_url:str?
+
+# Integração com Autenticação:
+# 1. Endpoint protegido (exige autenticação para as rotas)
+crudding add endpoint order total:decimal status:str --protected
+
+# 2. Endpoint restrito a papéis específicos (RBAC)
+crudding add endpoint audit_log action:str details:text --roles "admin"
+
+# 3. Endpoint associado ao proprietário (Owner-aware: adiciona user_id:ref e filtra queries)
+crudding add endpoint profile bio:text avatar_url:str? --owner
 ```
 
 - **Tipos suportados em campos tipados (Go e Python):** `str`, `text`, `int`, `float`, `decimal`, `bool`, `date`, `datetime`, `uuid`, `ref` (`store:ref` gera FK `store_id` para `store.id`); sufixo `?` torna o campo opcional (`NULL`).
+- **Flags de Autenticação (`--protected`, `--roles`, `--owner`):**
+  - `--protected`: injeta os middlewares de autenticação nas rotas geradas.
+  - `--roles <roles>`: restringe as rotas aos papéis informados (RBAC).
+  - `--owner`: adiciona automaticamente a coluna `user_id:ref` (chave estrangeira para `users.id`) e protege contra IDOR/BOLA filtrando as buscas e modificações no banco de dados (`WHERE user_id = currentUser.id`).
 - **Como funciona:** Copia o molde definido em `"template_endpoint"` no `project.crud` (`name`, `files`, `register`, guardado em `.crudding/template/*`), substituindo identificadores em `snake_case`, `kebab-case`, `camelCase` e `PascalCase`, e duplica/remove as linhas de registro (rotas, imports, injeção de dependência) nos arquivos de `register`.
 - **Restrições:**
   - Você **pode** remover o endpoint `template` que fica na estrutura do projeto (`crudding remove endpoint template`) para limpar a rota `/template` residual; o que **não** pode ser removido são os arquivos de molde dentro de `.crudding/template/*` (nem readicionar o nome reservado `template` via `add endpoint`).
@@ -87,7 +101,31 @@ crudding add db <postgres|mysql|mongo>
   - **Node**: `runMigrations()` exportado em `src/database.{js,ts}`.
 - Atualiza `go.mod`, `requirements.txt` ou `package.json`.
 
-### 4. Inspecionando o Projeto (`info` / `info draw`)
+### 4. Adicionando Autenticação (`add auth`)
+
+Execute dentro de um projeto gerado (`go`, `python` ou `node`):
+
+```sh
+# Uso padrão (estratégia JWT)
+crudding add auth jwt
+
+# Uso avançado com flags de personalização
+crudding add auth jwt --roles "admin,user" --hasher argon2id --refresh-token --json
+```
+
+- **Estratégias suportadas:** `jwt` (padrão), `session`, `api-key`.
+- **Algoritmos de hash:** `bcrypt` (padrão) ou `argon2id`.
+- **O que gera:**
+  - Modelos de domínio `User` (com `id: uuid`, `email`, `password_hash`, `role`, timestamps) e `RefreshToken` (se `--refresh-token`).
+  - Schemas de validação e DTOs (`RegisterRequest`, `LoginRequest`, `AuthResponse`, etc.).
+  - Camada de segurança com hashing protegido contra *timing attacks* e emissor de tokens JWT.
+  - Endpoints prontos: `/auth/register`, `/auth/login`, `/auth/refresh` e `/auth/me`.
+  - Middlewares e guards de autenticação e RBAC (`RequireAuth`, `RequireRoles`, `get_current_user`).
+  - Variáveis de ambiente em `.env.example` e migrações em `migrations/`.
+  - Atualização automática de dependências (`go.mod`, `requirements.txt` ou `package.json`).
+  - Registro de configuração no manifesto `project.crud` (`"auth"`).
+
+### 5. Inspecionando o Projeto (`info` / `info draw`)
 
 ```sh
 # Exibe nome do projeto, stack e endpoints registrados no project.crud
@@ -98,7 +136,7 @@ crudding info draw
 crudding info draw a:hexagonal l:go
 ```
 
-### 5. Templates Customizados (`init`, `add template`, `template`)
+### 6. Templates Customizados (`init`, `add template`, `template`)
 
 Qualquer diretório de projeto pode ser transformado em um template reutilizável salvo em `~/.crudding/templates/` (ou `$CRUDDING_TEMPLATES_DIR`):
 
@@ -122,7 +160,7 @@ crudding template export meu-template [destino]
 crudding template import ./meu-template.zip
 ```
 
-### 6. Instalando ou Atualizando a Skill do `crudding` (`add skill`)
+### 7. Instalando ou Atualizando a Skill do `crudding` (`add skill`)
 
 Baixa o `AGENTS.md` oficial da raiz do repositório no GitHub e grava em `.agents/skills/crudding/SKILL.md` no diretório atual:
 

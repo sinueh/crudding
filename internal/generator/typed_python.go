@@ -28,7 +28,12 @@ var (
 )
 
 func (pythonLang) Name() string                      { return "python" }
-func (pythonLang) Type(f fields.Field) string        { return pyTypes[f.Type] }
+func (pythonLang) Type(f fields.Field) string {
+	if f.Type == "ref" && (f.Ref() == "user" || f.Ref() == "users") {
+		return "str"
+	}
+	return pyTypes[f.Type]
+}
 func (pythonLang) FieldName(f fields.Field) string   { return f.Column() }
 func (pythonLang) Reserved() []string                { return pyReserved }
 func (pythonLang) Placeholder(fields.Dialect, int) string { return "%s" }
@@ -62,7 +67,9 @@ func (p pythonLang) completeField(field fields.Field, view *fieldView) {
 	case "str":
 		constraint = append(constraint, "max_length=255")
 	case "ref":
-		constraint = append(constraint, "gt=0")
+		if field.Ref() != "user" && field.Ref() != "users" {
+			constraint = append(constraint, "gt=0")
+		}
 	}
 	declare := func(annotation string, optional bool) string {
 		args := slices.Clone(constraint)

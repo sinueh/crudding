@@ -1,0 +1,145 @@
+package middlewares
+
+import (
+	"strings"
+
+{{if eq .Framework "gin"}}	"net/http"
+
+	"{{.GoModule}}/{{.AuthDir}}/security"
+	"github.com/gin-gonic/gin"
+{{else if eq .Framework "fiber"}}	"{{.GoModule}}/{{.AuthDir}}/security"
+	"github.com/gofiber/fiber/v2"
+{{else if or (eq .Framework "chi") (eq .Framework "raw")}}	"context"
+	"net/http"
+
+	"{{.GoModule}}/{{.AuthDir}}/security"
+{{end}})
+
+type contextKey string
+
+const (
+	UserContextKey contextKey = "authUser"
+	UserIDKey      contextKey = "authUserID"
+	RoleKey        contextKey = "authRole"
+)
+
+type AuthMiddleware struct {
+	tokens *security.TokenService
+}
+
+func NewAuthMiddleware(tokens *security.TokenService) *AuthMiddleware {
+	return &AuthMiddleware{tokens: tokens}
+}
+
+{{if eq .Framework "gin"}}
+func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "cabeçalho de autorização ausente ou inválido"})
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := m.tokens.ValidateToken(tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token inválido ou expirado"})
+			return
+		}
+		c.Set("userID", claims.UserID)
+		c.Set("email", claims.Email)
+		c.Set("role", claims.Role)
+		c.Next()
+	}
+}
+
+func (m *AuthMiddleware) RequireRoles(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "permissões insuficientes"})
+			return
+		}
+		userRole, _ := roleVal.(string)
+		for _, r := range allowedRoles {
+			if r == userRole {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "acesso negado: permissões insuficientes"})
+	}
+}
+{{else if eq .Framework "fiber"}}
+func (m *AuthMiddleware) RequireAuth() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		authHeader := c.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "cabeçalho de autorização ausente ou inválido"})
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := m.tokens.ValidateToken(tokenStr)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "token inválido ou expirado"})
+		}
+		c.Locals("userID", claims.UserID)
+		c.Locals("email", claims.Email)
+		c.Locals("role", claims.Role)
+		return c.Next()
+	}
+}
+
+func (m *AuthMiddleware) RequireRoles(allowedRoles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		roleVal := c.Locals("role")
+		if roleVal == nil {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "permissões insuficientes"})
+		}
+		userRole, _ := roleVal.(string)
+		for _, r := range allowedRoles {
+			if r == userRole {
+				return c.Next()
+			}
+		}
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "acesso negado: permissões insuficientes"})
+	}
+}
+{{else}}
+func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, `{"error": "cabeçalho de autorização ausente ou inválido"}`, http.StatusUnauthorized)
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := m.tokens.ValidateToken(tokenStr)
+		if err != nil {
+			http.Error(w, `{"error": "token inválido ou expirado"}`, http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+		ctx = context.WithValue(ctx, RoleKey, claims.Role)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (m *AuthMiddleware) RequireRoles(allowedRoles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			roleVal := r.Context().Value(RoleKey)
+			if roleVal == nil {
+				http.Error(w, `{"error": "permissões insuficientes"}`, http.StatusForbidden)
+				return
+			}
+			userRole, _ := roleVal.(string)
+			for _, role := range allowedRoles {
+				if role == userRole {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			http.Error(w, `{"error": "acesso negado: permissões insuficientes"}`, http.StatusForbidden)
+		})
+	}
+}
+{{end}}

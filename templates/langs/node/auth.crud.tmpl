@@ -1,0 +1,12 @@
+{
+  "files": [
+    { "from": "langs/node/auth/models/user.{{.Runtime}}.tmpl", "to": "src/auth/models/user.{{.Runtime}}" },
+    { "from": "langs/node/auth/schemas/auth.{{.Runtime}}.tmpl", "to": "src/auth/schemas/auth.{{.Runtime}}" },
+    { "from": "langs/node/auth/security/security.{{.Runtime}}.tmpl", "to": "src/auth/security/security.{{.Runtime}}" },
+    { "from": "langs/node/auth/handlers/auth.{{.Runtime}}.tmpl", "to": "src/auth/handlers/auth.{{.Runtime}}" },
+    { "from": "langs/node/auth/middlewares/auth.{{.Runtime}}.tmpl", "to": "src/auth/middlewares/auth.{{.Runtime}}" }
+  ],
+  "merge": [
+    { "into": "package.json", "from": "langs/node/auth/package.json.tmpl" }
+  ]
+}

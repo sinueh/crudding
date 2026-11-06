@@ -36,6 +36,9 @@ func (d Dialect) Quote(identifier string) string {
 
 // ColumnType é o tipo da coluna de f no dialeto.
 func (d Dialect) ColumnType(f Field) string {
+	if f.Type == "ref" && (f.Ref() == "user" || f.Ref() == "users") {
+		return "VARCHAR(36)"
+	}
 	postgres := map[string]string{
 		"str": "VARCHAR(255)", "text": "TEXT", "int": "INTEGER", "float": "DOUBLE PRECISION",
 		"decimal": "NUMERIC(12, 2)", "bool": "BOOLEAN", "date": "DATE", "datetime": "TIMESTAMPTZ",
@@ -69,8 +72,12 @@ func CreateTable(d Dialect, table string, list []Field) string {
 		}
 		lines = append(lines, line)
 		if ref := field.Ref(); ref != "" {
+			refTable := ref
+			if ref == "user" {
+				refTable = "users"
+			}
 			name := "fk_" + table + "_" + field.Column()
-			constraints = append(constraints, fmt.Sprintf("CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)", q(name), q(field.Column()), q(ref), q("id")))
+			constraints = append(constraints, fmt.Sprintf("CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)", q(name), q(field.Column()), q(refTable), q("id")))
 			if d == Postgres {
 				// O MySQL indexa as chaves estrangeiras sozinho; o Postgres não.
 				indexes = append(indexes, fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s);", q("idx_"+table+"_"+field.Column()), q(table), q(field.Column())))
@@ -110,6 +117,11 @@ type Queries struct {
 // placeholder da linguagem. Quando dateAsText é true, colunas date voltam como
 // texto AAAA-MM-DD no SELECT (para linguagens que leem date em string).
 func BuildQueries(d Dialect, table string, list []Field, placeholder func(int) string, dateAsText bool) Queries {
+	return BuildQueriesWithOptions(d, table, list, placeholder, dateAsText, "")
+}
+
+// BuildQueriesWithOptions é o BuildQueries com suporte a filtro por proprietário (ownerColumn).
+func BuildQueriesWithOptions(d Dialect, table string, list []Field, placeholder func(int) string, dateAsText bool, ownerColumn string) Queries {
 	q := d.Quote
 	selectColumn := func(field Field) string {
 		column := q(field.Column())
@@ -130,11 +142,18 @@ func BuildQueries(d Dialect, table string, list []Field, placeholder func(int) s
 		sets = append(sets, fmt.Sprintf("%s = %s", q(field.Column()), placeholder(index+1)))
 	}
 	queries := Queries{
-		Select:    fmt.Sprintf("SELECT %s FROM %s ORDER BY %s", strings.Join(selected, ", "), q(table), q("id")),
-		SelectOne: fmt.Sprintf("SELECT %s FROM %s WHERE %s = %s", strings.Join(selected, ", "), q(table), q("id"), placeholder(1)),
-		Insert:    fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", q(table), strings.Join(columns, ", "), strings.Join(values, ", ")),
-		Update:    fmt.Sprintf("UPDATE %s SET %s WHERE %s = %s", q(table), strings.Join(sets, ", "), q("id"), placeholder(len(list)+1)),
-		Delete:    fmt.Sprintf("DELETE FROM %s WHERE %s = %s", q(table), q("id"), placeholder(1)),
+		Insert: fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", q(table), strings.Join(columns, ", "), strings.Join(values, ", ")),
+	}
+	if ownerColumn != "" {
+		queries.Select = fmt.Sprintf("SELECT %s FROM %s WHERE %s = %s ORDER BY %s", strings.Join(selected, ", "), q(table), q(ownerColumn), placeholder(1), q("id"))
+		queries.SelectOne = fmt.Sprintf("SELECT %s FROM %s WHERE %s = %s AND %s = %s", strings.Join(selected, ", "), q(table), q("id"), placeholder(1), q(ownerColumn), placeholder(2))
+		queries.Update = fmt.Sprintf("UPDATE %s SET %s WHERE %s = %s AND %s = %s", q(table), strings.Join(sets, ", "), q("id"), placeholder(len(list)+1), q(ownerColumn), placeholder(len(list)+2))
+		queries.Delete = fmt.Sprintf("DELETE FROM %s WHERE %s = %s AND %s = %s", q(table), q("id"), placeholder(1), q(ownerColumn), placeholder(2))
+	} else {
+		queries.Select = fmt.Sprintf("SELECT %s FROM %s ORDER BY %s", strings.Join(selected, ", "), q(table), q("id"))
+		queries.SelectOne = fmt.Sprintf("SELECT %s FROM %s WHERE %s = %s", strings.Join(selected, ", "), q(table), q("id"), placeholder(1))
+		queries.Update = fmt.Sprintf("UPDATE %s SET %s WHERE %s = %s", q(table), strings.Join(sets, ", "), q("id"), placeholder(len(list)+1))
+		queries.Delete = fmt.Sprintf("DELETE FROM %s WHERE %s = %s", q(table), q("id"), placeholder(1))
 	}
 	if d == Postgres {
 		queries.Insert += " RETURNING " + q("id")

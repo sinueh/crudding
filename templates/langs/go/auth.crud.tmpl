@@ -1,0 +1,12 @@
+{
+  "files": [
+    { "from": "langs/go/auth/models/user.go.tmpl", "to": "{{.AuthDir}}/models/user.go" },
+    { "from": "langs/go/auth/schemas/auth.go.tmpl", "to": "{{.AuthDir}}/schemas/auth.go" },
+    { "from": "langs/go/auth/security/security.go.tmpl", "to": "{{.AuthDir}}/security/security.go" },
+    { "from": "langs/go/auth/handlers/auth.go.tmpl", "to": "{{.AuthDir}}/handlers/auth.go" },
+    { "from": "langs/go/auth/middlewares/auth.go.tmpl", "to": "{{.AuthDir}}/middlewares/auth.go" }
+  ],
+  "append": [
+    { "into": "go.mod", "from": "langs/go/auth/go.mod.tmpl" }
+  ]
+}

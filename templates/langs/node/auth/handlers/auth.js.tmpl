@@ -1,0 +1,56 @@
+import express from "express";
+import crypto from "crypto";
+import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken } from "../security/security.js";
+import { requireAuth } from "../middlewares/auth.js";
+
+export const authRouter = express.Router();
+const usersDb = new Map();
+
+authRouter.post("/register", async (req, res) => {
+  const { email, password, role = "user" } = req.body;
+  if (!email || !email.includes("@") || !password || password.length < 8) {
+    return res.status(400).json({ error: "Email inválido ou senha com menos de 8 caracteres" });
+  }
+  if (usersDb.has(email)) {
+    return res.status(409).json({ error: "Email já cadastrado" });
+  }
+  const passwordHash = await hashPassword(password);
+  const user = {
+    id: crypto.randomUUID(),
+    email,
+    passwordHash,
+    role,
+    createdAt: new Date(),
+  };
+  usersDb.set(email, user);
+  res.status(201).json({ id: user.id, email: user.email, role: user.role, createdAt: user.createdAt });
+});
+
+authRouter.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const user = usersDb.get(email);
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    return res.status(401).json({ error: "Credenciais inválidas" });
+  }
+  const { token, expiresIn } = generateAccessToken(user.id, user.email, user.role);
+  const response = { accessToken: token, tokenType: "Bearer", expiresIn };
+{{if .HasRefresh}}  response.refreshToken = generateRefreshToken();
+{{end}}  res.json(response);
+});
+
+{{if .HasRefresh}}
+authRouter.post("/refresh", (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ error: "refreshToken obrigatório" });
+  const { token, expiresIn } = generateAccessToken("refreshed-id", "user@example.com", "user");
+  res.json({ accessToken: token, tokenType: "Bearer", expiresIn, refreshToken: generateRefreshToken() });
+});
+{{end}}
+
+authRouter.get("/me", requireAuth, (req, res) => {
+  res.json({
+    id: req.user.userId,
+    email: req.user.email,
+    role: req.user.role,
+  });
+});

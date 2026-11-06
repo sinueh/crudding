@@ -21,15 +21,32 @@ func CheckEndpointSupport(m manifest.Manifest) error {
 	return custom.CheckEndpoint(m)
 }
 
+// EndpointOptions define as opções de contexto de criação de um endpoint.
+type EndpointOptions struct {
+	Name      string
+	Specs     []string
+	Protected bool
+	Roles     []string
+	Owner     bool
+}
+
 // AddEndpoint cria o endpoint name no projeto em root copiando o endpoint de
 // exemplo do campo template_endpoint do project.crud, e registra o novo endpoint em
 // endpoints, files e directories.
 func AddEndpoint(root string, m manifest.Manifest, name string) (common.Result, error) {
+	return AddEndpointWithOptions(root, m, EndpointOptions{Name: name})
+}
+
+// AddEndpointWithOptions cria o endpoint com opções de proteção de autenticação.
+func AddEndpointWithOptions(root string, m manifest.Manifest, opts EndpointOptions) (common.Result, error) {
 	m = current(root, m)
 	if err := CheckEndpointSupport(m); err != nil {
 		return common.Result{}, err
 	}
-	patch, err := custom.EndpointPatch(root, m, name)
+	if (opts.Protected || len(opts.Roles) > 0 || opts.Owner) && !m.HasAuth() {
+		return common.Result{}, fmt.Errorf("o projeto não possui autenticação configurada; use 'crudding add auth' antes de usar --protected, --roles ou --owner")
+	}
+	patch, err := custom.EndpointPatchWithOptions(root, m, opts.Name, opts.Protected || opts.Owner, opts.Roles)
 	if err != nil {
 		return common.Result{}, err
 	}
@@ -38,7 +55,8 @@ func AddEndpoint(root string, m manifest.Manifest, name string) (common.Result, 
 		return common.Result{}, err
 	}
 
-	m.AddEndpoint(name)
+	m.AddEndpoint(opts.Name)
+	m.SetEndpointAuth(opts.Name, opts.Protected, opts.Roles, opts.Owner)
 	if err := common.RecordCreated(&m, result.Created); err != nil {
 		return common.Result{}, err
 	}

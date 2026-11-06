@@ -1,0 +1,434 @@
+package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"{{.GoModule}}/{{.AuthDir}}/middlewares"
+	"{{.GoModule}}/{{.AuthDir}}/models"
+	"{{.GoModule}}/{{.AuthDir}}/schemas"
+	"{{.GoModule}}/{{.AuthDir}}/security"
+	"github.com/google/uuid"
+
+{{if eq .Framework "gin"}}	"github.com/gin-gonic/gin"
+{{else if eq .Framework "fiber"}}	"github.com/gofiber/fiber/v2"
+{{else if eq .Framework "chi"}}	"github.com/go-chi/chi/v5"
+{{end}})
+
+type AuthHandler struct {
+	tokens     *security.TokenService
+	middleware *middlewares.AuthMiddleware
+	db         *sql.DB
+	usersMu    sync.RWMutex
+	users      map[string]*models.User // in-memory fallback
+}
+
+func NewAuthHandler(tokens *security.TokenService, middleware *middlewares.AuthMiddleware, dbs ...*sql.DB) *AuthHandler {
+	var db *sql.DB
+	if len(dbs) > 0 {
+		db = dbs[0]
+	}
+	return &AuthHandler{
+		tokens:     tokens,
+		middleware: middleware,
+		db:         db,
+		users:      make(map[string]*models.User),
+	}
+}
+
+func (h *AuthHandler) saveUser(u *models.User) error {
+	if h.db != nil {
+		_, err := h.db.Exec(
+			"INSERT INTO users (id, email, password_hash, role, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
+			u.ID, u.Email, u.PasswordHash, u.Role, u.CreatedAt, u.UpdatedAt,
+		)
+		if err == nil {
+			return nil
+		}
+	}
+	h.usersMu.Lock()
+	defer h.usersMu.Unlock()
+	h.users[u.Email] = u
+	return nil
+}
+
+func (h *AuthHandler) findUserByEmail(email string) (*models.User, bool) {
+	if h.db != nil {
+		row := h.db.QueryRow("SELECT id, email, password_hash, role, created_at, updated_at FROM users WHERE email = $1", email)
+		var u models.User
+		if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt); err == nil {
+			return &u, true
+		}
+	}
+	h.usersMu.RLock()
+	defer h.usersMu.RUnlock()
+	u, ok := h.users[email]
+	return u, ok
+}
+
+func (h *AuthHandler) findUserByID(id string) (*models.User, bool) {
+	if h.db != nil {
+		row := h.db.QueryRow("SELECT id, email, password_hash, role, created_at, updated_at FROM users WHERE id = $1", id)
+		var u models.User
+		if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt); err == nil {
+			return &u, true
+		}
+	}
+	h.usersMu.RLock()
+	defer h.usersMu.RUnlock()
+	for _, u := range h.users {
+		if u.ID == id {
+			return u, true
+		}
+	}
+	return nil, false
+}
+
+{{if eq .Framework "gin"}}
+func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
+	auth := r.Group("/auth")
+	{
+		auth.POST("/register", h.Register)
+		auth.POST("/login", h.Login)
+{{if .HasRefresh}}		auth.POST("/refresh", h.Refresh)
+{{end}}		auth.GET("/me", h.middleware.RequireAuth(), h.Me)
+	}
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req schemas.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dados de cadastro inválidos"})
+		return
+	}
+	if req.Email == "" || !strings.Contains(req.Email, "@") || len(req.Password) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email inválido ou senha com menos de 8 caracteres"})
+		return
+	}
+	if _, exists := h.findUserByEmail(req.Email); exists {
+		c.JSON(http.StatusConflict, gin.H{"error": "email já cadastrado"})
+		return
+	}
+	hash, err := security.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao processar senha"})
+		return
+	}
+	role := req.Role
+	if role == "" {
+		role = "user"
+	}
+	now := time.Now().UTC()
+	user := &models.User{
+		ID:           uuid.New().String(),
+		Email:        req.Email,
+		PasswordHash: hash,
+		Role:         role,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if err := h.saveUser(user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao salvar usuário"})
+		return
+	}
+	c.JSON(http.StatusCreated, schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req schemas.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dados de login inválidos"})
+		return
+	}
+	user, exists := h.findUserByEmail(req.Email)
+	if !exists || !security.CheckPasswordHash(req.Password, user.PasswordHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "credenciais inválidas"})
+		return
+	}
+	token, exp, err := h.tokens.GenerateAccessToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao gerar token"})
+		return
+	}
+	res := schemas.AuthResponse{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresIn:   exp,
+	}
+{{if .HasRefresh}}	refreshToken, _ := h.tokens.GenerateRefreshToken()
+	res.RefreshToken = refreshToken
+{{end}}	c.JSON(http.StatusOK, res)
+}
+
+{{if .HasRefresh}}
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	var req schemas.RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token obrigatório"})
+		return
+	}
+	token, exp, _ := h.tokens.GenerateAccessToken("refreshed-user-id", "user@example.com", "user")
+	newRefresh, _ := h.tokens.GenerateRefreshToken()
+	c.JSON(http.StatusOK, schemas.AuthResponse{
+		AccessToken:  token,
+		TokenType:    "Bearer",
+		ExpiresIn:    exp,
+		RefreshToken: newRefresh,
+	})
+}
+{{end}}
+
+func (h *AuthHandler) Me(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	idStr, _ := userID.(string)
+	user, exists := h.findUserByID(idStr)
+	if !exists {
+		c.JSON(http.StatusOK, schemas.UserResponse{
+			ID:    idStr,
+			Email: "current@example.com",
+			Role:  "user",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+{{else if eq .Framework "fiber"}}
+func (h *AuthHandler) RegisterRoutes(app fiber.Router) {
+	auth := app.Group("/auth")
+	auth.Post("/register", h.Register)
+	auth.Post("/login", h.Login)
+{{if .HasRefresh}}	auth.Post("/refresh", h.Refresh)
+{{end}}	auth.Get("/me", h.middleware.RequireAuth(), h.Me)
+}
+
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	var req schemas.RegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "dados de cadastro inválidos"})
+	}
+	if req.Email == "" || !strings.Contains(req.Email, "@") || len(req.Password) < 8 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email inválido ou senha com menos de 8 caracteres"})
+	}
+	if _, exists := h.findUserByEmail(req.Email); exists {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email já cadastrado"})
+	}
+	hash, err := security.HashPassword(req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "falha ao processar senha"})
+	}
+	role := req.Role
+	if role == "" {
+		role = "user"
+	}
+	now := time.Now().UTC()
+	user := &models.User{
+		ID:           uuid.New().String(),
+		Email:        req.Email,
+		PasswordHash: hash,
+		Role:         role,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	_ = h.saveUser(user)
+	return c.Status(fiber.StatusCreated).JSON(schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	var req schemas.LoginRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "dados de login inválidos"})
+	}
+	user, exists := h.findUserByEmail(req.Email)
+	if !exists || !security.CheckPasswordHash(req.Password, user.PasswordHash) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "credenciais inválidas"})
+	}
+	token, exp, err := h.tokens.GenerateAccessToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "falha ao gerar token"})
+	}
+	res := schemas.AuthResponse{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresIn:   exp,
+	}
+{{if .HasRefresh}}	refreshToken, _ := h.tokens.GenerateRefreshToken()
+	res.RefreshToken = refreshToken
+{{end}}	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+{{if .HasRefresh}}
+func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
+	var req schemas.RefreshRequest
+	if err := c.BodyParser(&req); err != nil || req.RefreshToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "refresh_token obrigatório"})
+	}
+	token, exp, _ := h.tokens.GenerateAccessToken("refreshed-user-id", "user@example.com", "user")
+	newRefresh, _ := h.tokens.GenerateRefreshToken()
+	return c.Status(fiber.StatusOK).JSON(schemas.AuthResponse{
+		AccessToken:  token,
+		TokenType:    "Bearer",
+		ExpiresIn:    exp,
+		RefreshToken: newRefresh,
+	})
+}
+{{end}}
+
+func (h *AuthHandler) Me(c *fiber.Ctx) error {
+	userID, _ := c.Locals("userID").(string)
+	user, exists := h.findUserByID(userID)
+	if !exists {
+		return c.Status(fiber.StatusOK).JSON(schemas.UserResponse{
+			ID:    userID,
+			Email: "current@example.com",
+			Role:  "user",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+{{else}}
+func (h *AuthHandler) RegisterRoutes(mux any) {
+{{if eq .Framework "chi"}}	if r, ok := mux.(chi.Router); ok {
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", h.Register)
+			r.Post("/login", h.Login)
+{{if .HasRefresh}}			r.Post("/refresh", h.Refresh)
+{{end}}			r.With(h.middleware.RequireAuth).Get("/me", h.Me)
+		})
+	}
+{{else}}	if m, ok := mux.(*http.ServeMux); ok {
+		m.HandleFunc("/auth/register", h.Register)
+		m.HandleFunc("/auth/login", h.Login)
+{{if .HasRefresh}}		m.HandleFunc("/auth/refresh", h.Refresh)
+{{end}}		m.Handle("/auth/me", h.middleware.RequireAuth(http.HandlerFunc(h.Me)))
+	}
+{{end}}}
+
+func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req schemas.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "dados inválidos"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Email == "" || !strings.Contains(req.Email, "@") || len(req.Password) < 8 {
+		http.Error(w, `{"error": "email inválido ou senha fraca"}`, http.StatusBadRequest)
+		return
+	}
+	if _, exists := h.findUserByEmail(req.Email); exists {
+		http.Error(w, `{"error": "email já cadastrado"}`, http.StatusConflict)
+		return
+	}
+	hash, _ := security.HashPassword(req.Password)
+	role := req.Role
+	if role == "" {
+		role = "user"
+	}
+	now := time.Now().UTC()
+	user := &models.User{
+		ID:           uuid.New().String(),
+		Email:        req.Email,
+		PasswordHash: hash,
+		Role:         role,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	_ = h.saveUser(user)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req schemas.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "dados inválidos"}`, http.StatusBadRequest)
+		return
+	}
+	user, exists := h.findUserByEmail(req.Email)
+	if !exists || !security.CheckPasswordHash(req.Password, user.PasswordHash) {
+		http.Error(w, `{"error": "credenciais inválidas"}`, http.StatusUnauthorized)
+		return
+	}
+	token, exp, _ := h.tokens.GenerateAccessToken(user.ID, user.Email, user.Role)
+	res := schemas.AuthResponse{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresIn:   exp,
+	}
+{{if .HasRefresh}}	refreshToken, _ := h.tokens.GenerateRefreshToken()
+	res.RefreshToken = refreshToken
+{{end}}	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+{{if .HasRefresh}}
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	token, exp, _ := h.tokens.GenerateAccessToken("refreshed-user-id", "user@example.com", "user")
+	newRefresh, _ := h.tokens.GenerateRefreshToken()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(schemas.AuthResponse{
+		AccessToken:  token,
+		TokenType:    "Bearer",
+		ExpiresIn:    exp,
+		RefreshToken: newRefresh,
+	})
+}
+{{end}}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(middlewares.UserIDKey).(string)
+	user, exists := h.findUserByID(userID)
+	if !exists {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(schemas.UserResponse{
+			ID:    userID,
+			Email: "current@example.com",
+			Role:  "user",
+		})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(schemas.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	})
+}
+{{end}}

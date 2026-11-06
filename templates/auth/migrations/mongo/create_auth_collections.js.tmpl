@@ -1,0 +1,6 @@
+db.createCollection("users");
+db.users.createIndex({ "email": 1 }, { unique: true });
+{{if .HasRefresh}}
+db.createCollection("refresh_tokens");
+db.refresh_tokens.createIndex({ "user_id": 1 });
+{{end}}
