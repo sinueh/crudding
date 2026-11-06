@@ -194,11 +194,17 @@ go run /caminho/do/crudding/cmd/crudding template use meu-template meu-app
 # Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
 go run /caminho/do/crudding/cmd/crudding add endpoint
 
-# Executar testes unitários
+# Executar verificações e testes unitários
+go vet ./...
 go test ./...
+
+# Gerar todas as combinações de linguagem/framework/arquitetura em ./generated
+make genall
 
 # Instalar o binário localmente
 go install ./cmd/crudding
+# ou via Makefile
+make install
 ```
 
 ### Nota sobre Ambientes em Containers / Flatpak (OSTree)
