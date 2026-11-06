@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import mysql from 'mysql2/promise';
 
 export const pool = mysql.createPool({
@@ -9,4 +11,15 @@ export const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
 });
+
+export async function runMigrations(dir = 'migrations'): Promise<void> {
+  if (!fs.existsSync(dir)) return;
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.up.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(dir, file), 'utf8');
+    for (const stmt of sql.split(';').map((s) => s.trim()).filter(Boolean)) {
+      await pool.query(stmt);
+    }
+  }
+}
 

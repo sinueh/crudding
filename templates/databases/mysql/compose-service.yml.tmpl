@@ -11,3 +11,4 @@ mysql:
     - "${DB_PORT:-3306}:3306"
   volumes:
     - mysql_data:/var/lib/mysql
+    - ./migrations:/docker-entrypoint-initdb.d:ro

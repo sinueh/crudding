@@ -1,4 +1,5 @@
-{{if eq .ORM "sqlalchemy"}}from sqlalchemy import create_engine
+from pathlib import Path
+{{if eq .ORM "sqlalchemy"}}from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 {{else}}import pymysql
 from pymysql.cursors import DictCursor

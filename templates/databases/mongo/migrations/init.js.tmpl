@@ -1,5 +1,4 @@
 // Migration inicial do MongoDB
 db = db.getSiblingDB('app');
-db.createCollection('users');
-db.users.createIndex({ email: 1 }, { unique: true });
+db.createCollection('template');
 

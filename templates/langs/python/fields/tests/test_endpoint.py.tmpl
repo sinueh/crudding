@@ -12,15 +12,9 @@ PAYLOAD = {{.Endpoint.SamplePayload}}
 def _database():
     """Os testes usam o banco configurado: pulados se ele estiver fora do ar."""
     try:
-{{- if eq .ORM "sqlalchemy" }}
-        from {{.Modules.config}} import engine
+        from {{.Modules.config}} import run_migrations
 
-        engine.raw_connection().close()
-{{- else }}
-        from {{.Modules.config}} import get_connection
-
-        get_connection().close()
-{{- end }}
+        run_migrations()
     except Exception as exc:  # noqa: BLE001
         pytest.skip(f"banco de dados indisponível: {exc}")
 {{- end }}
